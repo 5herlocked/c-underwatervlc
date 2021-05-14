@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/c_underwatervlc_zed_record.dir/src/zed_record.cpp.o -o c_underwatervlc_zed_record 
