@@ -1,0 +1,14 @@
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/receiver/CMakeFiles/rebuild_cache.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/receiver/CMakeFiles/edit_cache.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/receiver/CMakeFiles/c_underwatervlc_receiver.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/svo_export/CMakeFiles/edit_cache.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/svo_export/CMakeFiles/rebuild_cache.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/svo_export/CMakeFiles/c_underwatervlc_svo_export.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/transmitter/CMakeFiles/rebuild_cache.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/transmitter/CMakeFiles/edit_cache.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/transmitter/CMakeFiles/c_underwatervlc_transmitter.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/zed_record/CMakeFiles/rebuild_cache.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/zed_record/CMakeFiles/edit_cache.dir
+/home/sherlock/source/c_underwatervlc/cmake-build-debug/zed_record/CMakeFiles/c_underwatervlc_zed_record.dir
