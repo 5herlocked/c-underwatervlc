@@ -9,7 +9,7 @@
 #include <cstdint>
 
 class transmitter {
-    //  The only address we really need
+    // The only address we really need
     #define GPIO_1     0x6000d000
     #define GPIO_2     0x6000d100
     #define GPIO_3     0x6000d200
