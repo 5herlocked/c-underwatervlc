@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(svo_export)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 find_package(ZED 3 REQUIRED)
 find_package(OpenCV REQUIRED)

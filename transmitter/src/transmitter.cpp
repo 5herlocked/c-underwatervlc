@@ -79,7 +79,7 @@ int main()
     //  "blink" the output values
     uint8_t val = 0xff;
     while (true) {
-        std::this_thread::sleep_for(std::chrono::nanoseconds(1/frequency));
+        std::this_thread::sleep_for(std::chrono::seconds(1/frequency));
         val = val ^ 0xff;
         pin->OUT[0] = val;
     }
