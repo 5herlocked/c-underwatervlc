@@ -78,11 +78,17 @@ int main()
 
     //  "blink" the output values
     uint8_t val = 0xff;
-    while (true) {
+    int generatedRecords = 0;
+    auto start = std::chrono::high_resolution_clock::now();
+    while (generatedRecords < 10) {
+        generatedRecords++;
         std::this_thread::sleep_for(std::chrono::seconds(1/frequency));
         val = val ^ 0xff;
         pin->OUT[0] = val;
     }
+    auto end = std::chrono::high_resolution_clock::now();
 
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    printf("Generated Records: %d. Time taken: %ld ms\n", generatedRecords, duration.count());
     return 0 ;
 }

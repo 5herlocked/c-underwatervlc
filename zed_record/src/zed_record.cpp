@@ -5,10 +5,6 @@
 #include "zed_record.h"
 #include <ctime>
 #include <sl/Camera.hpp>
-#include <cstdio>
-#include <iostream>
-
-#include "utils.h"
 
 
 using namespace sl;
@@ -18,9 +14,9 @@ void showUsage();
 
 void print(const string& msg_prefix, ERROR_CODE err_code = ERROR_CODE::SUCCESS, const string& msg_suffix = "");
 
-void parseArgs(int argc, char *argv[], InitParameters &param);
+void parseArgs(int argc, char *argv[], InitParameters &param, string& file_name);
 
-void getResFrameRate(string& resStr, string& frameStr, InitParameters& param);
+void getResFrameRate(const string& resStr, const string& frameStr, InitParameters& param);
 
 int getValidFrameRate(RESOLUTION resolution, int rate);
 
@@ -34,7 +30,8 @@ int main(int argc, char *argv[]) {
     init.coordinate_units = UNIT::MILLIMETER;
     init.coordinate_system = COORDINATE_SYSTEM::RIGHT_HANDED_Y_UP;
 
-    parseArgs(argc, argv, init);
+    string fileName;
+    parseArgs(argc, argv, init, fileName);
 }
 
 void print(const string& msg_prefix, ERROR_CODE err_code, const string& msg_suffix) {
@@ -53,8 +50,13 @@ void print(const string& msg_prefix, ERROR_CODE err_code, const string& msg_suff
 }
 
 void parseArgs(int argc, char *argv[], InitParameters &param, string& file_name) {
+    time_t tt;
+    struct tm* ti;
+    time(&tt);
+    ti = localtime(&tt);
+
     if (argc == 1) {
-        cout << "Using default values of WVGA@100fps with the filename being " << ctime(&time(0)) << ".svo" << endl;
+        cout << "Using default values of WVGA@100fps with the filename being " << asctime(ti) << ".svo" << endl;
     }
 
     string frameRateStr;
@@ -80,7 +82,7 @@ void parseArgs(int argc, char *argv[], InitParameters &param, string& file_name)
 }
 
 void getResFrameRate(const string& resStr, const string& frameStr, InitParameters& param) {
-    int frameRate = strtol(frameStr, nullptr, 10);
+    int frameRate = stoi(frameStr, nullptr, 10);
     if (resStr == "WVGA" || resStr == "VGA") {
         param.camera_resolution = RESOLUTION::VGA;
         param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);

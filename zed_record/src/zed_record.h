@@ -2,18 +2,28 @@
 // Created by sherlock on 12/05/2021.
 //
 #pragma once
-#include "sys/types.h"
-#include "sys/stat.h"
-#include "csignal"
 
 static bool exit_app = false;
 
+// Handle the CTRL-C keyboard signal
+#ifdef _WIN32
+#include <Windows.h>
+
+void CtrlHandler(DWORD fdwCtrlType) {
+    exit_app = (fdwCtrlType == CTRL_C_EVENT);
+}
+#else
+#include <signal.h>
 void nix_exit_handler(int s) {
     exit_app = true;
 }
+#endif
 
-void SetCtrlHandler () {
-#ifdef __linux__
+// Set the function to handle the CTRL-C
+void SetCtrlHandler() {
+#ifdef _WIN32
+    SetConsoleCtrlHandler((PHANDLER_ROUTINE) CtrlHandler, TRUE);
+#else // unix
     struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = nix_exit_handler;
     sigemptyset(&sigIntHandler.sa_mask);
