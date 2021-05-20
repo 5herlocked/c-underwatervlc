@@ -3,11 +3,10 @@
 //
 
 #include "zed_record.h"
-#include <time.h>
+#include <ctime>
 #include <sl/Camera.hpp>
-#include <stdio.h>
+#include <cstdio>
 #include <iostream>
-#include <getopt.h>
 
 #include "utils.h"
 
@@ -15,12 +14,17 @@
 using namespace sl;
 using namespace std;
 
-void print(string msg_prefix, ERROR_CODE err_code = ERROR_CODE::SUCCESS, string msg_suffix = "");
-void parseArgs(int argc, char* argv[], InitParameters& param);
-void getResolution(string resolutionArg, InitParameters& param);
-void getFrameRate(string frameRateArg, InitParameters& param);
+void showUsage();
 
-int main(int argc, char* argv[]) {
+void print(const string& msg_prefix, ERROR_CODE err_code = ERROR_CODE::SUCCESS, const string& msg_suffix = "");
+
+void parseArgs(int argc, char *argv[], InitParameters &param);
+
+void getResFrameRate(string& resStr, string& frameStr, InitParameters& param);
+
+int getValidFrameRate(RESOLUTION resolution, int rate);
+
+int main(int argc, char *argv[]) {
     Camera zed;
 
     InitParameters init;
@@ -33,11 +37,11 @@ int main(int argc, char* argv[]) {
     parseArgs(argc, argv, init);
 }
 
-void print(string msg_prefix, ERROR_CODE err_code, string msg_suffix) {
+void print(const string& msg_prefix, ERROR_CODE err_code, const string& msg_suffix) {
     if (err_code != ERROR_CODE::SUCCESS)
         cout << "[Error] ";
     else
-        cout<<" ";
+        cout << " ";
     cout << msg_prefix << " ";
     if (err_code != ERROR_CODE::SUCCESS) {
         cout << " | " << toString(err_code) << " : ";
@@ -48,110 +52,87 @@ void print(string msg_prefix, ERROR_CODE err_code, string msg_suffix) {
     cout << endl;
 }
 
-void parseArgs(int argc, char* argv[], InitParameters& param) {
+void parseArgs(int argc, char *argv[], InitParameters &param, string& file_name) {
     if (argc == 1) {
-        cout << "Using default values of WVGA@100fps with the filename being " << ctime(&time(0)) << ".svo"
+        cout << "Using default values of WVGA@100fps with the filename being " << ctime(&time(0)) << ".svo" << endl;
     }
+
+    string frameRateStr;
+    string resStr;
 
     for (int i = 1; i < argc; ++i) {
         string arg = argv[i];
         if ((arg == "-h") || (arg == "--help")) {
-            show_usage();
+            showUsage();
             return;
+        } else if ((arg == "-r") || (arg == "--resolution")) {
+            resStr = argv[i + 1];
+        } else if ((arg == "-f") || (arg == "--framerate")) {
+            frameRateStr = argv[i + 1];
+        } else if ((arg == "-o") || (arg == "--output")) {
+            file_name = argv[i + 1];
+        } else {
+            cout << "Unknown option: <" << argv[i] << endl;
         }
-        else if ((arg == "-r") || (arg == "--resolution")) {
-            getResolution(argv[i + 1], param)
-        }
-        else if ((arg == "-f") || (arg == "--framerate")) {
-            getFrameRate(argv[i+1], param)
-        }
+    }
+
+    getResFrameRate(resStr, frameRateStr, param);
+}
+
+void getResFrameRate(const string& resStr, const string& frameStr, InitParameters& param) {
+    int frameRate = strtol(frameStr, nullptr, 10);
+    if (resStr == "WVGA" || resStr == "VGA") {
+        param.camera_resolution = RESOLUTION::VGA;
+        param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
+    } else if (resStr == "HD" || resStr == "720P") {
+        param.camera_resolution = RESOLUTION::HD720;
+        param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
+    } else if (resStr =="FULLHD" || resStr == "1080P") {
+        param.camera_resolution = RESOLUTION::HD1080;
+        param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
+    } else if (resStr == "ULTRAHD" || resStr == "4K") {
+        param.camera_resolution = RESOLUTION::HD2K;
+        param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
     }
 }
 
-void getResolution(string resolutionArg, InitParameters& param) {
-    if (param.camera_fps == null) {
-        // feel free to set the resolution as we see fit
-        if ((resolutionArg == "VGA")) {
-
-        }
-    }
-    else {
-        // resolutions possible are restricted by the framerate
+int getValidFrameRate(RESOLUTION resolution, int rate) {
+    switch (resolution) {
+        case RESOLUTION::VGA:
+            // acceptable framerates 15, 30, 60, 100
+            if (rate == 15) {
+                return 15;
+            } else if (rate == 30) {
+                return 30;
+            } else if (rate == 60) {
+                return 60;
+            } else {
+                return 100;
+            }
+        case RESOLUTION::HD720:
+            // acceptable framerates 15, 30, 60
+            if (rate == 15) {
+                return 15;
+            } else if (rate == 30) {
+                return 30;
+            } else {
+                return 60;
+            }
+        case RESOLUTION::HD1080:
+            // acceptable framerates 15, 30
+            if (rate == 15) {
+                return 15;
+            } else {
+                return 30;
+            }
+        case RESOLUTION::HD2K:
+            // acceptable framerate 15
+            return 15;
+        case RESOLUTION::LAST:
+            break;
     }
 }
 
-void getFrameRate(string frameRateArg, InitParameters& param) {
-    int frameRateNum;
-    try {
-        frameRateNum = std::atoi(frameRateArg.c_str());
-    } catch (std::invalid_argument arg) {
-        cout << "Looks like the framerate you provided is not a number" << endl;
-    }
+void showUsage () {
 
-    if (param.camera_resolution == null) {
-        // feel free to set the framerate as we see fit
-        switch (frameRateNum) {
-            case 15:
-                param.camera_fps = 15;
-                break;
-            case 30:
-                param.camera_fps = 30;
-                break;
-            case 60:
-                param.camera_fps = 60;
-                break;
-            case 100:
-                param.camera_fps = 100;
-                break;
-            default:
-                cout << "Frame rate chosen was not from an acceptable value set." << endl;
-                cout << "Setting it to the default framerate of your chosen resolution" << endl;
-                break;
-        }
-    }
-    else {
-        // possible framerates are limited by resolution choice
-        switch(param.camera_resolution) {
-            case RESOLUTION::VGA:
-                // acceptable framerates 15, 30, 60, 100
-                if (frameRateNum == 15) {
-                    param.camera_fps = 15;
-                }
-                else if (frameRateNum == 30) {
-                    param.camera_fps = 30;
-                }
-                else if (frameRateNum == 60) {
-                    param.camera_fps = 60;
-                }
-                else {
-                    param.camera_fps = 100;
-                }
-                break;
-            case RESOLUTION::HD720:
-                // acceptable framerates 15, 30, 60
-                if (frameRateNum == 15) {
-                    param.camera_fps = 15;
-                }
-                else if (frameRateNum == 30) {
-                    param.camera_fps = 30;
-                }
-                else {
-                    param.camera_fps = 60;
-                }
-                break;
-            case RESOLUTION::HD1080:
-                // acceptable framerates 15, 30
-                if (frameRateNum == 15) {
-                    param.camera_fps = 15;
-                }
-                else {
-                    param.camera_fps = 30;
-                }
-                break;
-            case RESOLUTION:HD2K:
-                // acceptable framerate 15
-                param.camera_fps = 15;
-                break;
-        }
-    }
 }
