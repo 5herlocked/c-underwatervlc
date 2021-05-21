@@ -2,10 +2,13 @@ cmake_minimum_required(VERSION 3.10)
 project(svo_export)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 
 find_package(ZED 3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(CUDA ${ZED_CUDA_VERSION} EXACT REQUIRED)
+
+set(SPECIAL_OS_LIBS "pthread" "X11")
 
 include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(${ZED_INCLUDE_DIRS})
