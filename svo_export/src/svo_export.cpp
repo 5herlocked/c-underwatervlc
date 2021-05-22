@@ -2,61 +2,138 @@
 // Created by sherlock on 12/05/2021.
 //
 
-#include "svo_export.h"
-#include "iostream"
-#include "sstream"
-#include "opencv2/opencv.hpp"
+#include <iostream>
+#include <sstream>
+#include <opencv2/opencv.hpp>
 #include "utils.h"
-#include "sl/Camera.hpp"
+#include <sl/Camera.hpp>
+#include <optional>
+#include <cstdlib>
 
 using namespace sl;
 using namespace std;
 
+enum SOURCE_TYPE {
+    SINGLE_VIDEO,
+    FOLDER
+};
+
 enum APP_TYPE {
-    FOLDER_OF_VIDS,
-    COMPLETE_DECOMPOSITION
+    VIDEO_ONLY,
+    COMPLETE_DECOMPOSITION,
+};
+
+struct Configuration {
+    // This should be separated into private variables and public accessor methods but
+    // I am becoming a little lazy
+    string location;
+    optional<SOURCE_TYPE> source;
+    optional<APP_TYPE> type;
+    string genericOutput;
 };
 
 void print(const string& msg_prefix, ERROR_CODE err_code = ERROR_CODE::SUCCESS, const string& msg_suffix = "");
-void parseArgs(int argc, char* argv[]);
-void exportFolder(const string& folderPath);
-void exportVideo(const string& videoPath);
+void parseArgs(int argc, char* argv[], Configuration& config);
+void exportFolder(Configuration& config);
+void exportVideo(Configuration& config);
 void showUsage();
 
 int main(int argc, char* argv[]) {
+    Configuration config{};
+    parseArgs(argc, argv, config);
 
+    // Because of the checks in parseArgs before we come down here, we know all config files are valid
+    // So the stD::optional is entirely unnecessary anywhere except for parseArgs
+    switch(config.source.value()) {
+        case SINGLE_VIDEO:
+            // make sure vid exists then send it off to be processed in the proper manner
+            break;
+        case FOLDER:
+            // make sure we have access to the folder AND it has at least one .svo file in it
+            // then create a list of all svo files in the vid and just export vid with proper config
+            break;
+    }
 }
 
 void print(const string& msg_prefix, ERROR_CODE err_code, const string& msg_suffix) {
-
+    if (err_code != ERROR_CODE::SUCCESS)
+        cout << "[Error] ";
+    else
+        cout<<" ";
+    cout << msg_prefix << " ";
+    if (err_code != ERROR_CODE::SUCCESS) {
+        cout << " | " << toString(err_code) << " : ";
+        cout << toVerbose(err_code);
+    }
+    if (!msg_suffix.empty())
+        cout << " " << msg_suffix;
+    cout << endl;
 }
 
-void parseArgs(int argc, char* argv[]) {
+void parseArgs(int argc, char* argv[], Configuration& app_config) {
+    // TODO: Convert this to use getopt
+    // It's included in stdlib.h just so we know
     for (int i = 1; i < argc; ++i) {
         string arg = argv[i];
         if ((arg == "-h") || (arg == "--help")) {
             showUsage();
             return;
-        } else if ((arg == "-r") || (arg == "--resolution")) {
-            resStr = argv[i + 1];
-        } else if ((arg == "-f") || (arg == "--framerate")) {
-            frameRateStr = argv[i + 1];
+        } else if ((arg == "-v") || (arg == "--video")) {
+            if (!app_config.type.has_value()) {
+                // If the type of the app hasn't already been set
+                app_config.type = APP_TYPE::VIDEO_ONLY;
+            } else {
+                cout << "You have attempted to use 2 type flags. Please make up your mind." << endl;
+                showUsage();
+            }
+        } else if ((arg == "-a") || (arg == "--all")) {
+            if (!app_config.type.has_value()) {
+                // If the type of app hasn't already been set
+                app_config.type = APP_TYPE::COMPLETE_DECOMPOSITION;
+            } else {
+                cout << "You have attempted to use 2 type flags. Please make up your mind." << endl;
+                showUsage();
+            }
+        } else if ((arg == "-d") || (arg == "--folder")) {
+            if (!app_config.source.has_value()) {
+                // If the source hasn't already been declared
+                app_config.source = SOURCE_TYPE::FOLDER;
+            } else {
+                cout << "You have attempted to use 2 source flags. Please make up your mind." << endl;
+                showUsage();
+            }
+        } else if ((arg == "-f") || (arg == "--file")) {
+            if (!app_config.source.has_value()) {
+                // If the source hasn't already been declared
+                app_config.source = SOURCE_TYPE::FOLDER;
+            } else {
+                cout << "You have attempted to use 2 source flags. Please make up your mind." << endl;
+                showUsage();
+            }
         } else if ((arg == "-o") || (arg == "--output")) {
-            file_name = argv[i + 1];
+
         } else {
             cout << "Unknown option: <" << argv[i] << endl;
         }
+        // TODO: Add config checking to verify an appropriate configuration has been generated
     }
 }
 
-void exportFolder(const string &folderPath) {
+void exportVideo(Configuration &config) {
 
 }
 
-void exportVideo(const string &videoPath) {
+void exportFolder(Configuration &config) {
 
 }
 
 void showUsage() {
+    cout << "./svo_export -a -v -f <file_path> -o <output_name>" << endl;
+    cout << "-a or -all\t: Use this if you want the video, png sequences and depth sequences" << endl;
+    cout << "-v or --video\t: Use this if you want the video only" << endl;
+    cout << "-f or --file\t: File path of the svo file to export" << endl;
+    cout << "-o or --output\t: Generic output name for the generated files" << endl;
+    cout << "-f or --folder\t: Path to a folder with svos to be exported" << endl;
 
+    exit(-1);
 }
