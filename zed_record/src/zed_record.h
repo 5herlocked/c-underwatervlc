@@ -13,7 +13,7 @@ void CtrlHandler(DWORD fdwCtrlType) {
     exit_app = (fdwCtrlType == CTRL_C_EVENT);
 }
 #else
-#include <signal.h>
+#include <csignal>
 void nix_exit_handler(int s) {
     exit_app = true;
 }
@@ -24,11 +24,11 @@ void SetCtrlHandler() {
 #ifdef _WIN32
     SetConsoleCtrlHandler((PHANDLER_ROUTINE) CtrlHandler, TRUE);
 #else // unix
-    struct sigaction sigIntHandler;
+    struct sigaction sigIntHandler{};
     sigIntHandler.sa_handler = nix_exit_handler;
     sigemptyset(&sigIntHandler.sa_mask);
     sigIntHandler.sa_flags = 0;
-    sigaction(SIGINT, &sigIntHandler, NULL);
+    sigaction(SIGINT, &sigIntHandler, nullptr);
 #endif
 }
 

@@ -21,7 +21,9 @@ void CtrlHandler(DWORD fdwCtrlType) {
     exit_app = (fdwCtrlType == CTRL_C_EVENT);
 }
 #else
-#include <signal.h>
+#include <csignal>
+#include <sl/Camera.hpp>
+
 void nix_exit_handler(int s) {
     exit_app = true;
 }
@@ -32,16 +34,16 @@ void SetCtrlHandler() {
 #ifdef _WIN32
     SetConsoleCtrlHandler((PHANDLER_ROUTINE) CtrlHandler, TRUE);
 #else // unix
-    struct sigaction sigIntHandler;
+    struct sigaction sigIntHandler{};
     sigIntHandler.sa_handler = nix_exit_handler;
     sigemptyset(&sigIntHandler.sa_mask);
     sigIntHandler.sa_flags = 0;
-    sigaction(SIGINT, &sigIntHandler, NULL);
+    sigaction(SIGINT, &sigIntHandler, nullptr);
 #endif
 }
 
 // Display progress bar
-void ProgressBar(float ratio, unsigned int w) {
+void progressBar(float ratio, unsigned int w) {
     unsigned int c = ratio * w;
     for (unsigned int x = 0; x < c; x++) std::cout << "=";
     for (unsigned int x = c; x < w; x++) std::cout << " ";
@@ -71,14 +73,14 @@ cv::Mat slMat2cvMat(sl::Mat &input) {
 }
 #endif
 
-bool directoryExists(std::string diectory) {
+bool directoryExists(const std::string& directory) {
     struct stat info{};
-    if (stat(diectory.c_str(), &info) != 0)
+    if (stat(directory.c_str(), &info) != 0)
         return false;
     else if (info.st_mode & S_IFDIR)  // S_ISDIR() doesn't exist on my windows
         return true;
-    else
-        return false;
+
+    return false;
 }
 
 #endif //SVO_EXPORT_UTILS_H
