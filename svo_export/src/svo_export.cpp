@@ -10,6 +10,16 @@
 #include <optional>
 #include <cstdlib>
 
+#if __has_include(<filesystem>)
+#include <filesystem>
+  namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#else
+error "Missing the <filesystem> header."
+#endif
+
 using namespace sl;
 using namespace std;
 
@@ -35,7 +45,8 @@ struct Configuration {
 void print(const string& msg_prefix, ERROR_CODE err_code = ERROR_CODE::SUCCESS, const string& msg_suffix = "");
 void parseArgs(int argc, char* argv[], Configuration& config);
 void exportFolder(Configuration& config);
-void exportVideo(Configuration& config);
+void exportVideo(Configuration& config, const optional<string>& filename = nullopt);
+bool fileExists(const fs::path &path, fs::file_status status = fs::file_status{});
 void showUsage();
 
 int main(int argc, char* argv[]) {
@@ -47,11 +58,24 @@ int main(int argc, char* argv[]) {
     switch(config.source.value()) {
         case SINGLE_VIDEO:
             // make sure vid exists then send it off to be processed in the proper manner
-            break;
+            if (fileExists(config.location)) {
+                exportVideo(config);
+                return 0;
+            } else {
+                // The file does not exist
+                cout << "The file " << config.location << " does not exist" << endl;
+                return -1;
+            }
         case FOLDER:
             // make sure we have access to the folder AND it has at least one .svo file in it
             // then create a list of all svo files in the vid and just export vid with proper config
-            break;
+            if (fileExists(config.location)) {
+                exportFolder(config);
+                return 0;
+            } else {
+                cout << "The folder " << config.location << " does not exist" << endl;
+                return -1;
+            }
     }
 }
 
@@ -119,10 +143,21 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
     }
 }
 
-void exportVideo(Configuration &config) {
-
+// Pre-condition: command line options are valid, the file exists and is of the type svo
+// All this does is instantiates a video writer and writes out files based on the configuration
+void exportVideo(Configuration &config, const optional<string>& filename) {
+    if (filename.has_value()) {
+        // This means we're passing a specific filename
+        // We need to use the configuration options with the given filenames
+    } else {
+        // This means we're not passing a specific filename
+        // We need to fetch it from the configuration
+    }
 }
 
+// Pre-conditions: command line options are valid, the folder exists.
+// All this does is opens the folder, retrieves a list of .svo files
+// and then converts each video individually
 void exportFolder(Configuration &config) {
 
 }
@@ -136,4 +171,11 @@ void showUsage() {
     cout << "-f or --folder\t: Path to a folder with svos to be exported" << endl;
 
     exit(-1);
+}
+
+bool fileExists(const fs::path &path, fs::file_status status) {
+    if (fs::exists(path))
+        return true;
+
+    return false;
 }
