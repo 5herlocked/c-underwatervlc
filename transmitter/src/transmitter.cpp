@@ -1,22 +1,13 @@
 //
 // Simple GPIO memory-mapped example by Snarky (github.com/jwatte)
 // build with:
-//  g++ -O1 -g -o mem gpiomem.cpp -Wall -std=gnu++17
+//  g++ -O1 -g -o mem transmitter.cpp -Wall -std=gnu++17
 // run with:
-//  sudo ./mem
+//  sudo ./transmitter
 //
-//
-#include "transmitter.h"
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cstdint>
-#include <cerrno>
-#include <chrono>
-#include <thread>
-#include <unistd.h>
-#include <sys/fcntl.h>
-#include <sys/mman.h>
+
+// Modified and maintained by Sherlocked (github.com/5herlocked)
+// For MORSELab as part of his responsibilities
 
 /* Tegra X1 SoC Technical Reference Manual, version 1.3
  *
@@ -38,10 +29,79 @@
  * function. This is convenient for those who have a different pinmux at boot.
  */
 
-int main()
+#include "transmitter.h"
+#include <cstdio>
+#include <cstdlib>
+#include <chrono>
+#include <thread>
+#include <optional>
+#include <getopt.h>
+#include <unistd.h>
+#include <sys/fcntl.h>
+#include <sys/mman.h>
+#include <iostream>
+
+using namespace std;
+
+// The only address we really need
+#define GPIO_1     0x6000d000
+#define GPIO_2     0x6000d100
+#define GPIO_3     0x6000d200
+#define GPIO_4     0x6000d300
+#define GPIO_5     0x6000d400
+#define GPIO_6     0x6000d500
+#define GPIO_7     0x6000d600
+#define GPIO_8     0x6000d700
+
+//  layout based on the definitions above
+//  Each GPIO controller has four ports, each port controls 8 pins, each
+//  register is interleaved for the four ports, so
+//  REGX: port0, port1, port2, port3
+//  REGY: port0, port1, port2, port3
+struct GPIO_mem {
+    uint32_t CNF[4];
+    uint32_t OE[4];
+    uint32_t OUT[4];
+    uint32_t IN[4];
+    uint32_t INT_STA[4];
+    uint32_t INT_ENB[4];
+    uint32_t INT_LVL[4];
+    uint32_t INT_CLR[4];
+};
+
+enum APP_TYPE {
+    STATE,
+    RANDOM,
+    // TODO: Just add elements in here as the app gets more complicated
+};
+
+enum GPIO_STATE {
+    OFF,
+    ON,
+};
+
+struct Configuration {
+    optional<APP_TYPE> type;
+    optional<GPIO_STATE> state;
+    optional<int> bits;
+    optional<int> frequency;
+    optional<int> cycles;
+};
+
+void parseArgs(int argc, char **argv, Configuration& config);
+void transmit();
+void showUsage();
+
+int main(int argc, char* argv[])
 {
-    // change frequency here
-    int frequency = 1;
+    Configuration appConfig{};
+    parseArgs(argc, argv, appConfig);
+
+
+    return 0;
+}
+
+void transmit() {
     //  read physical memory (needs root)
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd < 0) {
@@ -61,7 +121,7 @@ int main()
     }
 
     //  set up a pointer for convenient access -- this pointer is to the selected GPIO controller
-    auto volatile *pin = (transmitter::GPIO_mem volatile *)((char *)base + (GPIO_2 & pagemask));
+    auto volatile *pin = (GPIO_mem volatile *)((char *)base + (GPIO_2 & pagemask));
 
     pin->CNF[0] = 0x00ff;
     pin->OE[0] = 0xff;
@@ -90,5 +150,42 @@ int main()
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     printf("Generated Records: %d. Time taken: %ld ms\n", generatedRecords, duration.count());
-    return 0 ;
+}
+
+void parseArgs(int argc, char **argv, Configuration& config) {
+    int opt;
+    struct option long_options[] = {
+            {"help", no_argument, nullptr, 'h'},
+            {"state", required_argument, nullptr, 's'},
+            {"random", optional_argument, nullptr, 'r'},
+            {"frequency", optional_argument, nullptr, 'f'},
+            {"cycles", optional_argument, nullptr, 'c'},
+            {0, 0, 0, 0}
+    };
+    int optionIdx = 0;
+    while ((opt = getopt_long(argc, argv, "hs:r:f:c:", long_options, &optionIdx)) != -1) {
+        switch (opt) {
+            case 0:
+                // TODO: No arguments, default options
+                break;
+            case 'h':
+                showUsage();
+                exit(0);
+            case 's':
+                // TODO: Configure the app to set the state of the Transmitter
+                break;
+            case 'r':
+                // TODO: Configure the app to set the random bits
+                break;
+            case 'f':
+                // TODO: Configure the app to set the frequency
+                break;
+            case 'c':
+                // TODO: Configure the app to set the cycles
+                break;
+            default:
+                cout << "Unknown option: <" << opt << endl;
+                break;
+        }
+    }
 }

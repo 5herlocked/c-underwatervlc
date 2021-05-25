@@ -95,13 +95,12 @@ void print(const string& msg_prefix, ERROR_CODE err_code, const string& msg_suff
 }
 
 void parseArgs(int argc, char* argv[], Configuration& app_config) {
-    // TODO: Convert this to use getopt
-    // It's included in stdlib.h just so we know
     for (int i = 1; i < argc; ++i) {
+        // Stores the option
         string arg = argv[i];
         if ((arg == "-h") || (arg == "--help")) {
             showUsage();
-            return;
+            exit(0);
         } else if ((arg == "-v") || (arg == "--video")) {
             if (!app_config.type.has_value()) {
                 // If the type of the app hasn't already been set
@@ -122,6 +121,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
             if (!app_config.source.has_value()) {
                 // If the source hasn't already been declared
                 app_config.source = SOURCE_TYPE::FOLDER;
+                app_config.location = argv[i+1];
             } else {
                 cout << "You have attempted to use 2 source flags. Please make up your mind." << endl;
                 showUsage();
@@ -130,6 +130,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
             if (!app_config.source.has_value()) {
                 // If the source hasn't already been declared
                 app_config.source = SOURCE_TYPE::SINGLE_VIDEO;
+                app_config.location = argv[i+1];
             } else {
                 cout << "You have attempted to use 2 source flags. Please make up your mind." << endl;
                 showUsage();
@@ -137,7 +138,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
         } else if ((arg == "-o") || (arg == "--output")) {
             if (!app_config.genericOutput.has_value()) {
                 // If the output value has not already been declared
-                app_config.genericOutput = arg.c_str();
+                app_config.genericOutput = argv[i+1];
             } else {
                 cout << "You have attempted to set 2 values of output. Please make up your mind" << endl;
             }
