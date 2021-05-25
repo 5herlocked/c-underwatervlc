@@ -5,7 +5,6 @@
 #ifndef C_UNDERWATERVLC_SVO_EXPORT_H
 #define C_UNDERWATERVLC_SVO_EXPORT_H
 
-
 class svo_export {
 
 };
