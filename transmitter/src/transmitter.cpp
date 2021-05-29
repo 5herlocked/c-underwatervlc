@@ -1,10 +1,5 @@
 //
 // Simple GPIO memory-mapped example by Snarky (github.com/jwatte)
-// build with:
-//  g++ -O1 -g -o mem transmitter.cpp -Wall -std=gnu++17
-// run with:
-//  sudo ./transmitter
-//
 
 // Modified and maintained by Sherlocked (github.com/5herlocked)
 // For MORSELab as part of his responsibilities
@@ -160,7 +155,7 @@ void parseArgs(int argc, char **argv, Configuration& config) {
             {"random", optional_argument, nullptr, 'r'},
             {"frequency", optional_argument, nullptr, 'f'},
             {"cycles", optional_argument, nullptr, 'c'},
-            {0, 0, 0, 0}
+            {nullptr, 0, nullptr, 0}
     };
     int optionIdx = 0;
     while ((opt = getopt_long(argc, argv, "hs:r:f:c:", long_options, &optionIdx)) != -1) {

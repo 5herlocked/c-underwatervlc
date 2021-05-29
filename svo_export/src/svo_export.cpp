@@ -2,7 +2,6 @@
 // Created by sherlock on 12/05/2021.
 //
 #include <iostream>
-#include <sstream>
 #include <opencv2/opencv.hpp>
 #include "utils.h"
 #include <sl/Camera.hpp>
@@ -35,10 +34,10 @@ enum APP_TYPE {
 struct Configuration {
     // This should be separated into private variables and public accessor methods but
     // I am becoming a little lazy
-    optional<String> location;
+    optional<std::string> location;
     optional<SOURCE_TYPE> source;
     optional<APP_TYPE> type;
-    optional<String> genericOutput;
+    optional<std::string> genericOutput;
 };
 
 void print(const string& msg_prefix, ERROR_CODE err_code = ERROR_CODE::SUCCESS, const string& msg_suffix = "");
@@ -63,6 +62,7 @@ int main(int argc, char* argv[]) {
                 return 0;
             } else {
                 // The file does not exist
+                cout << config.location.value().c_str() << endl;
                 cout << "Error accessing file: " << fs_error.message() << endl;
                 return -1;
             }
@@ -121,7 +121,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
             if (!app_config.source.has_value()) {
                 // If the source hasn't already been declared
                 app_config.source = SOURCE_TYPE::FOLDER;
-                app_config.location = argv[i+1];
+                app_config.location = argv[++i];
             } else {
                 cout << "You have attempted to use 2 source flags. Please make up your mind." << endl;
                 showUsage();
@@ -130,7 +130,9 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
             if (!app_config.source.has_value()) {
                 // If the source hasn't already been declared
                 app_config.source = SOURCE_TYPE::SINGLE_VIDEO;
-                app_config.location = argv[i+1];
+                std::filesystem::path file_path = argv[++i];
+                app_config.location = file_path.string();
+                app_config.genericOutput = file_path.replace_extension().string();
             } else {
                 cout << "You have attempted to use 2 source flags. Please make up your mind." << endl;
                 showUsage();
@@ -138,7 +140,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
         } else if ((arg == "-o") || (arg == "--output")) {
             if (!app_config.genericOutput.has_value()) {
                 // If the output value has not already been declared
-                app_config.genericOutput = argv[i+1];
+                app_config.genericOutput = argv[++i];
             } else {
                 cout << "You have attempted to set 2 values of output. Please make up your mind" << endl;
             }
@@ -155,10 +157,12 @@ int exportVideo(Configuration &config) {
     Camera zed;
 
     InitParameters init;
-    init.input.setFromSVOFile(config.location.value());
+    init.input.setFromSVOFile(config.location.value().c_str());
     init.coordinate_system = COORDINATE_SYSTEM::RIGHT_HANDED_Y_UP;
     init.coordinate_units = UNIT::MILLIMETER;
     init.depth_mode = DEPTH_MODE::ULTRA;
+
+    zed.open(init);
 
     Resolution imageSize = zed.getCameraInformation().camera_configuration.resolution;
 
@@ -177,7 +181,9 @@ int exportVideo(Configuration &config) {
     int fourcc = cv::VideoWriter::fourcc('M', '4', 'S', '2'); // MP4 part 2 codec
 
     int frameRate = zed.getInitParameters().camera_fps;
-    videoWriter.open(config.genericOutput.value().c_str(), fourcc, frameRate, cv::Size(imageSize.width * 2, imageSize.height));
+    std::string output_file_name = config.genericOutput.value() + ".avi";
+
+    videoWriter.open(output_file_name, fourcc, frameRate, cv::Size(imageSize.width * 2, imageSize.height));
 
     if (!videoWriter.isOpened()) {
         print("Error: OpenCV video writer cannot be opened. Please check the .avi file path and write permissions.");
@@ -239,6 +245,7 @@ int exportVideo(Configuration &config) {
             print("Grab Error: ", err);
             exit_app = true;
         }
+        progressBar((float)(svoPos/(float)numFrames), 30);
     }
 
     videoWriter.release();
@@ -254,7 +261,8 @@ void exportFolder(Configuration &config) {
 
     for (const auto& file : fs::directory_iterator(config.location.value().c_str())) {
         if (file.path().extension() == ".svo") {
-            tempConfig.location = file.path().c_str();
+            optional<std::string> temp = file.path().string();
+            tempConfig.location = temp;
             exportVideo(tempConfig);
         }
     }

@@ -10,7 +10,9 @@ find_package(ZED 3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(CUDA ${ZED_CUDA_VERSION} EXACT REQUIRED)
 
-set(SPECIAL_OS_LIBS "pthread" "X11")
+if (NOT WIN32)
+    set(SPECIAL_OS_LIBS "pthread" "X11")
+endif()
 
 include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(${ZED_INCLUDE_DIRS})
@@ -30,4 +32,6 @@ else()
 endif()
 
 target_link_libraries(${PROJECT_NAME} ${ZED_LIBS} ${OpenCV_LIBRARIES})
-target_link_libraries(${PROJECT_NAME} stdc++fs)
+if (NOT WIN32)
+        target_link_libraries(${PROJECT_NAME} stdc++fs)
+endif()
