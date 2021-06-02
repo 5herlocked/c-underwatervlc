@@ -95,6 +95,7 @@ void print(const string& msg_prefix, ERROR_CODE err_code, const string& msg_suff
 }
 
 void parseArgs(int argc, char* argv[], Configuration& app_config) {
+    // TODO: Add error checking in each of the branches
     for (int i = 1; i < argc; ++i) {
         // Stores the option
         string arg = argv[i];

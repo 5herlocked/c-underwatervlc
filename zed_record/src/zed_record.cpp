@@ -7,17 +7,12 @@
 #include <sl/Camera.hpp>
 
 
-using namespace sl;
 using namespace std;
 
 void showUsage();
-
 void print(const string& msg_prefix, ERROR_CODE err_code = ERROR_CODE::SUCCESS, const string& msg_suffix = "");
-
 void parseArgs(int argc, char *argv[], InitParameters &param, string& file_name);
-
 void getResFrameRate(const string& resStr, const string& frameStr, InitParameters& param);
-
 int getValidFrameRate(RESOLUTION resolution, int rate);
 
 int main(int argc, char *argv[]) {
@@ -32,6 +27,8 @@ int main(int argc, char *argv[]) {
 
     string fileName;
     parseArgs(argc, argv, init, fileName);
+
+    // TODO: the actual record loop
 }
 
 void print(const string& msg_prefix, ERROR_CODE err_code, const string& msg_suffix) {
@@ -62,6 +59,7 @@ void parseArgs(int argc, char *argv[], InitParameters &param, string& file_name)
     string frameRateStr;
     string resStr;
 
+    // TODO: Add error checking in each of the if branches
     for (int i = 1; i < argc; ++i) {
         string arg = argv[i];
         if ((arg == "-h") || (arg == "--help")) {
@@ -136,5 +134,10 @@ int getValidFrameRate(RESOLUTION resolution, int rate) {
 }
 
 void showUsage () {
+    cout << "./zed_record -r <resolution> -f <frameRate> -o <output_name>" << endl;
+    cout << "-r or --resolution\t: Define the resolution of the recording. Accepted values: WVGA, HD, FULLHD, 4K" << endl;
+    cout << "-f or --framerate\t: Define the framerate of the recording. Limited by the resolution. Accepted values are 15, 30, 60, 100" << endl;
+    cout << "-o or --output\t: Define the output name of the file. Limited only by the filesystem" << endl;
 
+    exit(-1);
 }
