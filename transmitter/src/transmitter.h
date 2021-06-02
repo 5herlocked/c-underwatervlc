@@ -2,7 +2,6 @@
 // Created by sherlock on 12/05/2021.
 //
 
-// Borrowed from YoungJin Suh (github.com/valentis)
 // Modified for morselab by Shardul Vaidya
 
 #ifndef C_UNDERWATERVLC_TRANSMITTER_H
@@ -33,7 +32,7 @@
 
 // The only address we really need
 // These are full controller addresses
-// Don't need them but leaving them in here
+// TODO: Figure out how the controller addresses can be used to modify the individual pin values
 #define GPIO_1     0x6000d000
 #define GPIO_2     0x6000d100
 #define GPIO_3     0x6000d200
@@ -48,6 +47,7 @@
 //  register is interleaved for the four ports, so
 //  REGX: port0, port1, port2, port3
 //  REGY: port0, port1, port2, port3
+//  TODO: Figure out what this comment means for actual pin submasks
 struct GPIO_mem {
     uint32_t CNF[4];
     uint32_t OE[4];
