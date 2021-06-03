@@ -42,7 +42,7 @@ struct Configuration {
 
 void print(const string& msg_prefix, ERROR_CODE err_code = ERROR_CODE::SUCCESS, const string& msg_suffix = "");
 void parseArgs(int argc, char* argv[], Configuration& config);
-void exportFolder(Configuration& config);
+void exportFolder(Configuration config);
 int exportVideo(Configuration& config);
 void showUsage();
 
@@ -122,7 +122,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
             if (!app_config.source.has_value()) {
                 // If the source hasn't already been declared
                 app_config.source = SOURCE_TYPE::FOLDER;
-                app_config.location = argv[++i];
+                app_config.location = absolute(fs::path(argv[++i])).string();
             } else {
                 cout << "You have attempted to use 2 source flags. Please make up your mind." << endl;
                 showUsage();
@@ -205,7 +205,7 @@ int exportVideo(Configuration &config) {
 
     SetCtrlHandler();
 
-    while(!exit_app) {
+    while(true) {
         sl::ERROR_CODE err = zed.grab(param);
         // The SVO grab was successful
         if (err == ERROR_CODE::SUCCESS) {
@@ -241,10 +241,10 @@ int exportVideo(Configuration &config) {
             }
         } else if (err == ERROR_CODE::END_OF_SVOFILE_REACHED) {
             print("SVO end has been reached. Exiting now.");
-            exit_app = true;
+            break;
         } else {
             print("Grab Error: ", err);
-            exit_app = true;
+            break;
         }
         progressBar((float)(svoPos/(float)numFrames), 30);
     }
@@ -257,25 +257,27 @@ int exportVideo(Configuration &config) {
 // Pre-conditions: command line options are valid, the folder exists.
 // All this does is opens the folder, retrieves a list of .svo files
 // and then converts each video individually
-void exportFolder(Configuration &config) {
+void exportFolder(Configuration config) {
     Configuration tempConfig = config;
 
     for (const auto& file : fs::directory_iterator(config.location.value().c_str())) {
         if (file.path().extension() == ".svo") {
             optional<std::string> temp = file.path().string();
+            optional<std::string> output_val = file.path().filename().replace_extension().string();
             tempConfig.location = temp;
+            tempConfig.genericOutput = output_val;
             exportVideo(tempConfig);
         }
     }
 }
 
 void showUsage() {
-    cout << "./svo_export -a -v -f <file_path> -o <output_name>" << endl;
+    cout << "./svo_export -a -v -d <folder_path> -f <file_path> -o <output_name>" << endl;
     cout << "-a or -all\t: Use this if you want the video, png sequences and depth sequences" << endl;
     cout << "-v or --video\t: Use this if you want the video only" << endl;
     cout << "-f or --file\t: File path of the svo file to export" << endl;
     cout << "-o or --output\t: Generic output name for the generated files" << endl;
-    cout << "-f or --folder\t: Path to a folder with svos to be exported" << endl;
+    cout << "-d or --folder\t: Path to a folder with svos to be exported" << endl;
 
     exit(-1);
 }
