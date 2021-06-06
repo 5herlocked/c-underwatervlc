@@ -28,7 +28,7 @@
  */
 
 #pragma once
-#include <stdint.h>
+#include <cstdint>
 
 // The only address we really need
 // These are full controller addresses

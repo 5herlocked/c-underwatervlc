@@ -3,11 +3,11 @@
 //
 
 #include <iostream>
-#include <opencv2/opencv.hpp>
-#include "utils.h"
-#include <sl/Camera.hpp>
 #include <optional>
 #include <cstdlib>
+#include "utils.h"
+
+#include <opencv2/opencv.hpp>
 
 #if __has_include(<filesystem>)
 #include <filesystem>
@@ -34,7 +34,7 @@ struct Configuration {
     optional<std::string> genericOutput;
 };
 
-void print(const string& msg_prefix, sl::ERROR_CODE err_code = sl::ERROR_CODE::SUCCESS, const string& msg_suffix = "");
+[[maybe_unused]] void print(const string& msg_prefix, sl::ERROR_CODE err_code = sl::ERROR_CODE::SUCCESS, const string& msg_suffix = "");
 void parseArgs(int argc, char* argv[], Configuration& config);
 void analyseFolder(Configuration& config);
 int analyseVideo(Configuration& config);
@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
     }
 }
 
-void print(const string& msg_prefix, sl::ERROR_CODE err_code, const string& msg_suffix) {
+[[maybe_unused]] void print(const string& msg_prefix, sl::ERROR_CODE err_code, const string& msg_suffix) {
     if (err_code != sl::ERROR_CODE::SUCCESS)
         cout << "[Error] ";
     else
@@ -109,7 +109,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
             if (!app_config.source.has_value()) {
                 // If the source hasn't already been declared
                 app_config.source = SOURCE_TYPE::SINGLE_VIDEO;
-                std::filesystem::path file_path = argv[++i];
+                fs::path file_path = argv[++i];
                 app_config.location = file_path.string();
                 app_config.genericOutput = file_path.replace_extension().string();
             } else {
@@ -130,6 +130,40 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
 }
 
 int analyseVideo(Configuration &config) {
+    cv::VideoCapture video(config.location.value());
+
+    if (!video.isOpened()) {
+        cout << "Cannot open the video file" << endl;
+        exit(-1);
+    }
+
+    double fps = video.get(cv::CAP_PROP_FPS);
+    // TODO: use fps
+    cv::InputArray lower_blue = cv::InputArray(std::vector({110, 50, 50}));
+    cv::InputArray upper_blue = cv::InputArray(std::vector({130, 255, 255}));
+
+
+    while (true) {
+        // Material frames we need
+        cv::Mat frame;
+        cv::Mat hsv_frame;
+        cv::Mat frame_mask;
+        cv::Mat blue_objects;
+
+        bool readSuccess = video.read(frame);
+        if (!readSuccess) {
+            cout << "Found end of video" << endl;
+            break;
+        }
+
+        cv::cvtColor(frame, hsv_frame, cv::COLOR_BGR2HSV);
+        cv::inRange(hsv_frame, lower_blue, upper_blue, frame_mask);
+        cv::bitwise_and(frame, frame, frame_mask);
+
+        cv::imshow("frame", frame);
+        cv::imshow("mask", frame_mask);
+        cv::imshow("final", blue_objects);
+    }
 
     return 0;
 }
@@ -137,13 +171,15 @@ int analyseVideo(Configuration &config) {
 // Pre-conditions: command line options are valid, the folder exists.
 // All this does is opens the folder, retrieves a list of .svo files
 // and then converts each video individually
-void exportFolder(Configuration &config) {
+void analyseFolder(Configuration &config) {
     Configuration tempConfig = config;
 
     for (const auto& file : fs::directory_iterator(config.location.value().c_str())) {
         if (file.path().extension() == ".svo") {
             optional<std::string> temp = file.path().string();
+            optional<std::string> output_val = file.path().filename().replace_extension().string();
             tempConfig.location = temp;
+            tempConfig.genericOutput = output_val;
             analyseVideo(tempConfig);
         }
     }

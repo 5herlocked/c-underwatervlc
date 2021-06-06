@@ -43,14 +43,15 @@ void showUsage();
 
 int main(int argc, char* argv[])
 {
-    Configuration appConfig{};
-    parseArgs(argc, argv, appConfig);
-
+    transmit();
+//    Configuration appConfig{};
+//    parseArgs(argc, argv, appConfig);
 
     return 0;
 }
 
 void transmit() {
+    long frequency = 1/4;
     //  read physical memory (needs root)
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd < 0) {
@@ -63,7 +64,7 @@ void transmit() {
     int pagesize = getpagesize();
     int pagemask = pagesize-1;
     //  This page will actually contain all the GPIO controllers, because they are co-located
-    void *base = mmap(0, pagesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (GPIO_12 & ~pagemask));
+    void *base = mmap(0, pagesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (GPIO_3 & ~pagemask));
     if (base == nullptr) {
         perror("mmap()");
         exit(1);
@@ -89,9 +90,9 @@ void transmit() {
     uint8_t val = 0xff;
     int generatedRecords = 0;
     auto start = std::chrono::high_resolution_clock::now();
-    while (generatedRecords < 10) {
+    while (generatedRecords < 100) {
         generatedRecords++;
-        std::this_thread::sleep_for(std::chrono::seconds(1/frequency));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
         val = val ^ 0xff;
         pin->OUT[0] = val;
     }
@@ -104,41 +105,41 @@ void transmit() {
     close(fd);
 }
 
-void parseArgs(int argc, char **argv, Configuration& config) {
-    // TODO: make this not use getopt
-    int opt;
-    struct option long_options[] = {
-            {"help", no_argument, nullptr, 'h'},
-            {"state", required_argument, nullptr, 's'},
-            {"random", optional_argument, nullptr, 'r'},
-            {"frequency", optional_argument, nullptr, 'f'},
-            {"cycles", optional_argument, nullptr, 'c'},
-            {nullptr, 0, nullptr, 0}
-    };
-    int optionIdx = 0;
-    while ((opt = getopt_long(argc, argv, "hs:r:f:c:", long_options, &optionIdx)) != -1) {
-        switch (opt) {
-            case 0:
-                // TODO: No arguments, default options
-                break;
-            case 'h':
-                showUsage();
-                exit(0);
-            case 's':
-                // TODO: Configure the app to set the state of the Transmitter
-                break;
-            case 'r':
-                // TODO: Configure the app to set the random bits
-                break;
-            case 'f':
-                // TODO: Configure the app to set the frequency
-                break;
-            case 'c':
-                // TODO: Configure the app to set the cycles
-                break;
-            default:
-                cout << "Unknown option: <" << opt << endl;
-                break;
-        }
-    }
-}
+//void parseArgs(int argc, char **argv, Configuration& config) {
+//    // TODO: make this not use getopt
+//    int opt;
+//    struct option long_options[] = {
+//            {"help", no_argument, nullptr, 'h'},
+//            {"state", required_argument, nullptr, 's'},
+//            {"random", optional_argument, nullptr, 'r'},
+//            {"frequency", optional_argument, nullptr, 'f'},
+//            {"cycles", optional_argument, nullptr, 'c'},
+//            {nullptr, 0, nullptr, 0}
+//    };
+//    int optionIdx = 0;
+//    while ((opt = getopt_long(argc, argv, "hs:r:f:c:", long_options, &optionIdx)) != -1) {
+//        switch (opt) {
+//            case 0:
+//                // TODO: No arguments, default options
+//                break;
+//            case 'h':
+//                showUsage();
+//                exit(0);
+//            case 's':
+//                // TODO: Configure the app to set the state of the Transmitter
+//                break;
+//            case 'r':
+//                // TODO: Configure the app to set the random bits
+//                break;
+//            case 'f':
+//                // TODO: Configure the app to set the frequency
+//                break;
+//            case 'c':
+//                // TODO: Configure the app to set the cycles
+//                break;
+//            default:
+//                cout << "Unknown option: <" << opt << endl;
+//                break;
+//        }
+//    }
+//}
