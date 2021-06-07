@@ -26,6 +26,12 @@ enum SOURCE_TYPE {
     FOLDER
 };
 
+struct ROIData {
+    cv::Point2i startPoint;
+    cv::Point2i endPoint;
+};
+
+
 struct Configuration {
     // This should be separated into private variables and public accessor methods but
     // I am becoming a little lazy
@@ -38,6 +44,7 @@ struct Configuration {
 void parseArgs(int argc, char* argv[], Configuration& config);
 void analyseFolder(Configuration& config);
 int analyseVideo(Configuration& config);
+void roiCallback(int event, int x, int y, int flags, void* userData);
 void showUsage();
 
 int main(int argc, char* argv[]) {
@@ -130,39 +137,48 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
 }
 
 int analyseVideo(Configuration &config) {
+    ROIData roi;
     cv::VideoCapture video(config.location.value());
+    vector<cv::Scalar> frameMeans = vector<cv::Scalar>();
 
     if (!video.isOpened()) {
         cout << "Cannot open the video file" << endl;
         exit(-1);
     }
 
+    cv::namedWindow("source vid", cv::WINDOW_AUTOSIZE);
+    cv::setMouseCallback("source vid", roiCallback, (void*)&roi);
+
+    cv::namedWindow("roi vid", cv::WINDOW_AUTOSIZE);
+    auto mask = cv::Rect(roi.startPoint, roi.endPoint);
     double fps = video.get(cv::CAP_PROP_FPS);
-    // TODO: use fps
+    double total_frames = video.get(cv::CAP_PROP_FRAME_COUNT);
+
+    // TODO: use fps and frame count
     cv::InputArray lower_blue = cv::InputArray(std::vector({110, 50, 50}));
     cv::InputArray upper_blue = cv::InputArray(std::vector({130, 255, 255}));
 
+    int position = 0;
 
     while (true) {
         // Material frames we need
         cv::Mat frame;
-        cv::Mat hsv_frame;
-        cv::Mat frame_mask;
-        cv::Mat blue_objects;
 
         bool readSuccess = video.read(frame);
         if (!readSuccess) {
             cout << "Found end of video" << endl;
             break;
         }
+        // increment position so we can keep track of where we are in dT
+        position += 1;
 
-        cv::cvtColor(frame, hsv_frame, cv::COLOR_BGR2HSV);
-        cv::inRange(hsv_frame, lower_blue, upper_blue, frame_mask);
-        cv::bitwise_and(frame, frame, frame_mask);
+        // This should be the ROI mat
+        cv::Mat roiMask = frame(mask);
 
-        cv::imshow("frame", frame);
-        cv::imshow("mask", frame_mask);
-        cv::imshow("final", blue_objects);
+        // This average will be more blue when the LED is on, and less blue when the LED is off
+        cv::Scalar average = cv::mean(frame, roiMask);
+        frameMeans.push_back(average);
+        // TODO: Make a vec of scalars that stores our values, then log them
     }
 
     return 0;
@@ -188,4 +204,16 @@ void analyseFolder(Configuration &config) {
 void showUsage() {
     // TODO: Fill out help section
     exit(-1);
+}
+
+void roiCallback(int event, int x, int y, int flags, void *userData) {
+    auto* roi = (ROIData*) userData;
+
+    if (event == cv::EVENT_LBUTTONDOWN) {
+        // Left button down, capture start point
+        roi->startPoint = cv::Point2i(x, y);
+    } else if (event == cv::EVENT_LBUTTONUP) {
+        // Left button up, capture end point
+        roi->endPoint = cv::Point2i(x, y);
+    }
 }
