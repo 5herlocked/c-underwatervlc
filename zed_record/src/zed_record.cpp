@@ -50,10 +50,10 @@ void parseArgs(int argc, char *argv[], InitParameters &param, string& file_name)
     time_t tt;
     struct tm* ti;
     time(&tt);
-    ti = localtime(&tt);
+    ti = localtime_s(&tt);
 
     if (argc == 1) {
-        cout << "Using default values of WVGA@100fps with the filename being " << asctime(ti) << ".svo" << endl;
+        cout << "Using default values of WVGA@100fps with the filename being " << asctime_s(ti) << ".svo" << endl;
     }
 
     string frameRateStr;

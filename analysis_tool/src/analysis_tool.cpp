@@ -203,11 +203,6 @@ void analyseFolder(Configuration &config) {
     }
 }
 
-void showUsage() {
-    // TODO: Fill out help section
-    exit(-1);
-}
-
 void roiCallback(int event, int x, int y, int flags, void *userData) {
     auto* roi = (ROIData*) userData;
 
@@ -231,4 +226,14 @@ void createCSV(const vector<LogEntry> &logs, const string &filename) {
     }
 
     csvStream.close();
+}
+
+
+void showUsage() {
+    // TODO: Fill out help section
+    cout << "./analysis_tool -f <file_path> -d <folder_path> -o <output_name>" << endl;
+    cout << "-f or --file\t: File path of the avi file you want to analyse" << endl;
+    cout << "-d or --folder\t: Path to a folder with svos to be analysed" << endl;
+    cout << "-o or --output\t: Generic output name for the generated analysis files" << endl;
+    exit(-1);
 }
