@@ -3,8 +3,8 @@
 //
 
 #include <iostream>
+#include <fstream>
 #include <optional>
-#include <cstdlib>
 #include "utils.h"
 
 #include <opencv2/opencv.hpp>
@@ -27,12 +27,15 @@ enum SOURCE_TYPE {
 };
 
 struct ROIData {
-    cv::Point2i startPoint;
-    cv::Point2i endPoint;
+    cv::Point2i startPoint{};
+    cv::Point2i endPoint{};
 };
 
-typedef tuple<double, sv::Scalar, int> logEntry;
-typedef vector<logEntry> logVec;
+struct LogEntry {
+    double deltaTime{};
+    cv::Scalar frameAverage{};
+    int deducedBit{};
+};
 
 struct Configuration {
     // This should be separated into private variables and public accessor methods but
@@ -46,7 +49,7 @@ void parseArgs(int argc, char* argv[], Configuration& config);
 void analyseFolder(Configuration& config);
 int analyseVideo(Configuration& config);
 void roiCallback(int event, int x, int y, int flags, void* userData);
-void createLogFile(const logVec& logs);
+void createCSV(const vector<LogEntry> &logs, const string &filename);
 void showUsage();
 
 int main(int argc, char* argv[]) {
@@ -126,7 +129,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
 int analyseVideo(Configuration &config) {
     ROIData roi;
     cv::VideoCapture video(config.location.value());
-    logVec frameMeans = logVec();
+    auto frameMeans = vector<LogEntry>();
 
     if (!video.isOpened()) {
         cout << "Cannot open the video file" << endl;
@@ -157,6 +160,7 @@ int analyseVideo(Configuration &config) {
             cout << "Found end of video" << endl;
             break;
         }
+        cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
         // increment position so we can keep track of where we are in dT
         position += 1;
 
@@ -169,10 +173,15 @@ int analyseVideo(Configuration &config) {
         double deltaTime = position/fps;
 
         // TODO: threshold to find the bit value
-        frameMeans.push_back(logEntry(deltaTime, average, 1))
+        frameMeans.push_back(LogEntry{
+            deltaTime,
+            average,
+            1
+        });
+        progressBar((float)position/total_frames, 30);
     }
 
-    createLogFile(frameMeans);
+    createCSV(frameMeans, config.genericOutput.value());
 
     return 0;
 }
@@ -184,7 +193,7 @@ void analyseFolder(Configuration &config) {
     Configuration tempConfig = config;
 
     for (const auto& file : fs::directory_iterator(config.location.value().c_str())) {
-        if (file.path().extension() == ".svo") {
+        if (file.path().extension() == ".avi") {
             optional<std::string> temp = file.path().string();
             optional<std::string> output_val = file.path().filename().replace_extension().string();
             tempConfig.location = temp;
@@ -209,4 +218,17 @@ void roiCallback(int event, int x, int y, int flags, void *userData) {
         // Left button up, capture end point
         roi->endPoint = cv::Point2i(x, y);
     }
+}
+
+void createCSV(const vector<LogEntry> &logs, const string &filename) {
+    fstream csvStream;
+    csvStream.open(filename, ios::out);
+
+    csvStream << "Delta Time" << "," << "Frame Average" << "," << "Bit" << "\n";
+
+    for (LogEntry entry : logs) {
+        csvStream << entry.deltaTime << "," << entry.frameAverage.val << "," << entry.deducedBit << "\n";
+    }
+
+    csvStream.close();
 }
