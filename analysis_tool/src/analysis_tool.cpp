@@ -31,6 +31,8 @@ struct ROIData {
     cv::Point2i endPoint;
 };
 
+typedef tuple<double, sv::Scalar, int> logEntry;
+typedef vector<logEntry> logVec;
 
 struct Configuration {
     // This should be separated into private variables and public accessor methods but
@@ -40,11 +42,11 @@ struct Configuration {
     optional<std::string> genericOutput;
 };
 
-[[maybe_unused]] void print(const string& msg_prefix, sl::ERROR_CODE err_code = sl::ERROR_CODE::SUCCESS, const string& msg_suffix = "");
 void parseArgs(int argc, char* argv[], Configuration& config);
 void analyseFolder(Configuration& config);
 int analyseVideo(Configuration& config);
 void roiCallback(int event, int x, int y, int flags, void* userData);
+void createLogFile(const logVec& logs);
 void showUsage();
 
 int main(int argc, char* argv[]) {
@@ -78,21 +80,6 @@ int main(int argc, char* argv[]) {
                 return -1;
             }
     }
-}
-
-[[maybe_unused]] void print(const string& msg_prefix, sl::ERROR_CODE err_code, const string& msg_suffix) {
-    if (err_code != sl::ERROR_CODE::SUCCESS)
-        cout << "[Error] ";
-    else
-        cout<<" ";
-    cout << msg_prefix << " ";
-    if (err_code != sl::ERROR_CODE::SUCCESS) {
-        cout << " | " << toString(err_code) << " : ";
-        cout << toVerbose(err_code);
-    }
-    if (!msg_suffix.empty())
-        cout << " " << msg_suffix;
-    cout << endl;
 }
 
 void parseArgs(int argc, char* argv[], Configuration& app_config) {
@@ -139,7 +126,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
 int analyseVideo(Configuration &config) {
     ROIData roi;
     cv::VideoCapture video(config.location.value());
-    vector<cv::Scalar> frameMeans = vector<cv::Scalar>();
+    logVec frameMeans = logVec();
 
     if (!video.isOpened()) {
         cout << "Cannot open the video file" << endl;
@@ -151,6 +138,7 @@ int analyseVideo(Configuration &config) {
 
     cv::namedWindow("roi vid", cv::WINDOW_AUTOSIZE);
     auto mask = cv::Rect(roi.startPoint, roi.endPoint);
+
     double fps = video.get(cv::CAP_PROP_FPS);
     double total_frames = video.get(cv::CAP_PROP_FRAME_COUNT);
 
@@ -175,11 +163,16 @@ int analyseVideo(Configuration &config) {
         // This should be the ROI mat
         cv::Mat roiMask = frame(mask);
 
+        // TODO: Make a vec of scalars that stores our values, then log them
         // This average will be more blue when the LED is on, and less blue when the LED is off
         cv::Scalar average = cv::mean(frame, roiMask);
-        frameMeans.push_back(average);
-        // TODO: Make a vec of scalars that stores our values, then log them
+        double deltaTime = position/fps;
+
+        // TODO: threshold to find the bit value
+        frameMeans.push_back(logEntry(deltaTime, average, 1))
     }
+
+    createLogFile(frameMeans);
 
     return 0;
 }
