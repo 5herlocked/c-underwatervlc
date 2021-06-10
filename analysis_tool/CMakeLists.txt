@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(analysis_tool)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 
 find_package(OpenCV REQUIRED)
 
