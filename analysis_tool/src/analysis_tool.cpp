@@ -10,13 +10,13 @@
 #include <opencv2/opencv.hpp>
 
 #if __has_include(<filesystem>)
-#include <filesystem>
-namespace fs = std::filesystem;
+    #include <filesystem>
+    namespace fs = std::filesystem;
 #elif __has_include(<experimental/filesystem>)
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+    #include <experimental/filesystem>
+    namespace fs = std::experimental::filesystem;
 #else
-error "Missing the <filesystem> header."
+    error "Missing the <filesystem> header."
 #endif
 
 using namespace std;
@@ -24,6 +24,11 @@ using namespace std;
 enum SOURCE_TYPE {
     SINGLE_VIDEO,
     FOLDER
+};
+
+enum APP_TYPE {
+    RAW_ANALYSIS,
+    DATASET_ANALYSIS
 };
 
 struct LogEntry {
@@ -37,12 +42,14 @@ struct Configuration {
     // I am becoming a little lazy
     optional<std::string> location;
     optional<SOURCE_TYPE> source;
+    optional<APP_TYPE> app;
     optional<std::string> genericOutput;
 };
 
 void parseArgs(int argc, char* argv[], Configuration& config);
 void analyseFolder(Configuration& config);
-int analyseVideo(Configuration& config);
+double analyseVideo(Configuration& config);
+void analyseDataset(Configuration &configuration, const fs::path& ledON, const fs::path& ledOFF);
 void createCSV(const vector<LogEntry> &logs, const string &filename);
 void showUsage();
 
@@ -91,6 +98,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
             if (!app_config.source.has_value()) {
                 // If the source hasn't already been declared
                 app_config.source = SOURCE_TYPE::FOLDER;
+                app_config.app = APP_TYPE::RAW_ANALYSIS;
                 app_config.location = argv[++i];
             } else {
                 cout << "You have attempted to use 2 source flags. Please make up your mind." << endl;
@@ -100,6 +108,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
             if (!app_config.source.has_value()) {
                 // If the source hasn't already been declared
                 app_config.source = SOURCE_TYPE::SINGLE_VIDEO;
+                app_config.app = APP_TYPE::RAW_ANALYSIS;
                 fs::path file_path = argv[++i];
                 app_config.location = file_path.string();
             } else {
@@ -113,13 +122,28 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
             } else {
                 cout << "You have attempted to set 2 values of output. Please make up your mind" << endl;
             }
+        } else if ((arg == "-s") || (arg == "--dataset")) {
+            // Sets a flag telling us to look for the on_100fps and off_100fps files
+            // to set a baseline for the dataset
+            // TODO: analyse a full dataset
+            app_config.app = APP_TYPE::DATASET_ANALYSIS;
         } else {
-            cout << "Unknown option: <" << argv[i] << endl;
+            cout << "Unknown option: " << argv[i] << endl;
         }
     }
 }
 
-int analyseVideo(Configuration &config) {
+/*
+ * TODO: Make analyseVideo a more elegant operation. Currently: it has 2 functions (find a way to unify functions so that all it does is, analyse the video in **one** way)
+ * analyseVideo returns the average of the scalar values of the video if using the dataset flag
+ *
+ * The way forward:
+ *  Simplest solution is make analyse video accept vec<cv::Scalar> but that might end up looking a little messy
+ *      It should let us reduce the burden on the stack by declaring the variable in the heap and just passing the pointer
+ *      But, it could lead to some slowdown
+ *  The more tricky solution would be using complex flag structures which would further complicate maintenance
+ */
+double analyseVideo(Configuration &config) {
     cv::VideoCapture video(config.location.value());
     auto frameMeans = vector<LogEntry>();
 
@@ -191,15 +215,42 @@ int analyseVideo(Configuration &config) {
 void analyseFolder(Configuration &config) {
     Configuration tempConfig = config;
 
-    for (const auto& file : fs::directory_iterator(config.location.value().c_str())) {
-        if (file.path().extension() == ".avi") {
-            optional<std::string> temp = file.path().string();
-            optional<std::string> output_val = file.path().filename().replace_extension().string();
-            tempConfig.location = temp;
-            tempConfig.genericOutput = output_val;
-            analyseVideo(tempConfig);
+    if (config.app.has_value() && config.app.value() == APP_TYPE::RAW_ANALYSIS) {
+        for (const auto& file : fs::directory_iterator(config.location.value().c_str())) {
+            if (file.path().extension() == ".avi") {
+                optional<std::string> temp = file.path().string();
+                optional<std::string> output_val = file.path().filename().replace_extension().string();
+                tempConfig.location = temp;
+                tempConfig.genericOutput = output_val;
+                analyseVideo(tempConfig);
+            }
         }
+    } else if (config.app.has_value() && config.app.value() == APP_TYPE::DATASET_ANALYSIS) {
+        // TODO: Dataset analysis
+        fs::path ledOnFile;
+        fs::path ledOffFile;
+
+        for (const auto& file : fs::directory_iterator(config.location.value().c_str())) {
+            if (file.path().has_extension() && file.path().extension() == ".avi") {
+                const string& filename = file.path().filename().string();
+                if (filename.find("on")) {
+                    ledOnFile = file.path();
+                } else if (filename.find("off")) {
+                    ledOffFile = file.path();
+                }
+            }
+        }
+
+        analyseDataset(config, ledOnFile, ledOffFile);
+    } else {
+        cout << "Congratulations, you have done something mathematically impossible. You must be proud." << endl;
+        cout << "Now go fix your options" << endl;
+        exit(-1);
     }
+}
+
+void analyseDataset(Configuration &configuration, const fs::path& ledON, const fs::path& ledOFF) {
+
 }
 
 void createCSV(const vector<LogEntry> &logs, const string &filename) {
@@ -210,7 +261,8 @@ void createCSV(const vector<LogEntry> &logs, const string &filename) {
 
     // frameAverage is of type double[4], we need to destructure it
     for (const LogEntry& entry : logs) {
-        csvStream << entry.deltaTime << "," << entry.frameAverage.val[0] << ","<< entry.frameAverage.val[1] << ","<< entry.frameAverage.val[2] << "," << entry.deducedBit << "\n";
+        csvStream << entry.deltaTime << "," << entry.frameAverage.val[0] << ","<< entry.frameAverage.val[1] << ","
+        << entry.frameAverage.val[2] << "," << entry.deducedBit << "\n";
     }
 
     csvStream.close();
@@ -219,7 +271,9 @@ void createCSV(const vector<LogEntry> &logs, const string &filename) {
 
 void showUsage() {
     // TODO: Fill out help section
-    cout << "./analysis_tool -f <file_path> -d <folder_path> -o <output_name>" << endl;
+    cout << "./analysis_tool -d -f <file_path> -d <folder_path> -o <output_name>" << endl;
+    cout << "-d or --dataset\t: Sets the dataset flag and stipulates that the included folder path contains a full "
+            "dataset that can be analysed contextually" << endl;
     cout << "-f or --file\t: File path of the avi file you want to analyse" << endl;
     cout << "-d or --folder\t: Path to a folder with svos to be analysed" << endl;
     cout << "-o or --output\t: Generic output name for the generated analysis files" << endl;
