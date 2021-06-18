@@ -34,7 +34,7 @@ enum APP_TYPE {
 struct LogEntry {
     double deltaTime{};
     cv::Scalar frameAverage{};
-    int deducedBit{};
+    optional<int> deducedBit{};
 };
 
 struct Configuration {
@@ -48,10 +48,14 @@ struct Configuration {
 
 void parseArgs(int argc, char* argv[], Configuration& config);
 void analyseFolder(Configuration& config);
-double analyseVideo(Configuration& config);
+optional<vector<LogEntry>> analyseVideo(Configuration &config, const optional<cv::Scalar>& ledONVal = nullopt, const optional<cv::Scalar>& ledOFFVal = nullopt);
 void analyseDataset(Configuration &configuration, const fs::path& ledON, const fs::path& ledOFF);
 void createCSV(const vector<LogEntry> &logs, const string &filename);
 void showUsage();
+
+cv::Scalar getScalarAverage(const optional<vector<LogEntry>>& logs);
+
+optional<std::string> replaceExtension(const filesystem::path &path);
 
 int main(int argc, char* argv[]) {
     Configuration config{};
@@ -143,7 +147,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
  *      But, it could lead to some slowdown
  *  The more tricky solution would be using complex flag structures which would further complicate maintenance
  */
-double analyseVideo(Configuration &config) {
+optional<vector<LogEntry>> analyseVideo(Configuration &config, const optional<cv::Scalar>& ledONVal, const optional<cv::Scalar>& ledOFFVal) {
     cv::VideoCapture video(config.location.value());
     auto frameMeans = vector<LogEntry>();
 
@@ -158,7 +162,7 @@ double analyseVideo(Configuration &config) {
     bool readSuccess = video.read(frame);
     if (!readSuccess) {
         cout << "Unable to read the video" << endl;
-        return EXIT_FAILURE;
+        return {};
     }
 
     cv::namedWindow("source vid", cv::WINDOW_AUTOSIZE);
@@ -188,25 +192,30 @@ double analyseVideo(Configuration &config) {
 
         // This should be the ROI mat
         roiMask = frame(roi);
-//        cv::imshow("roi vid", roiMask);
 
         // TODO: Make a vec of scalars that stores our values, then log them
         // This average will be more blue when the LED is on, and less blue when the LED is off
         cv::Scalar average = cv::mean(roiMask);
         double deltaTime = position/fps;
+        optional<int> deducedBit = nullopt;
+
+        if (ledONVal.has_value() && ledOFFVal.has_value()) {
+            // It's a dataset
+            // find diff between ledON and ledOFF
+            // split the diff to get threshold?
+            // deducedBit = average > threshold ? 1 : average < threshold ? 0 : nullopt
+        }
 
         // TODO: threshold to find the bit value
         frameMeans.push_back(LogEntry{
             deltaTime,
             average,
-            1
+            deducedBit
         });
         progressBar((float)position / totalFrames, 30);
     }
 
-    createCSV(frameMeans, config.genericOutput.value());
-
-    return 0;
+    return frameMeans;
 }
 
 // Pre-conditions: command line options are valid, the folder exists.
@@ -219,10 +228,14 @@ void analyseFolder(Configuration &config) {
         for (const auto& file : fs::directory_iterator(config.location.value().c_str())) {
             if (file.path().extension() == ".avi") {
                 optional<std::string> temp = file.path().string();
-                optional<std::string> output_val = file.path().filename().replace_extension().string();
+                optional<std::string> output_val = replaceExtension(file.path());
                 tempConfig.location = temp;
                 tempConfig.genericOutput = output_val;
-                analyseVideo(tempConfig);
+
+                auto generatedData = analyseVideo(tempConfig);
+                if (generatedData.has_value()) {
+                    createCSV(generatedData.value(), tempConfig.genericOutput.value());
+                }
             }
         }
     } else if (config.app.has_value() && config.app.value() == APP_TYPE::DATASET_ANALYSIS) {
@@ -249,8 +262,76 @@ void analyseFolder(Configuration &config) {
     }
 }
 
-void analyseDataset(Configuration &configuration, const fs::path& ledON, const fs::path& ledOFF) {
+optional<std::string> replaceExtension(const filesystem::path &path) {
+    if (path.empty()) {
+        cout << "Path: " << path.string() << " is empty" << endl;
+        return nullopt;
+    }
+    return path.filename().replace_extension().string();
+}
 
+void analyseDataset(Configuration &configuration, const fs::path& ledON, const fs::path& ledOFF) {
+    auto tempConfig = configuration;
+
+    // Sets up temporary configuration files
+    tempConfig.location = ledON.string();
+    tempConfig.genericOutput = replaceExtension(ledON);
+    auto ledONAverage = getScalarAverage(analyseVideo(tempConfig));
+
+    tempConfig.location = ledOFF.string();
+    tempConfig.genericOutput = replaceExtension(ledOFF);
+    auto ledOFFAverage = getScalarAverage(analyseVideo(tempConfig));
+
+    // iterate through the rest of the directory
+    for (const auto& file : fs::directory_iterator(configuration.location.value().c_str())) {
+        // Ignore the ON, OFF files
+        if (file.path().filename().string().find("on") || file.path().filename().string().find("off")) {
+            continue;
+        } else if (file.path().extension() == ".avi") {
+            optional<std::string> temp = file.path().string();
+            optional<std::string> output_val = replaceExtension(file.path());
+            tempConfig.location = temp;
+            tempConfig.genericOutput = output_val;
+
+            auto generatedData = analyseVideo(tempConfig, ledONAverage, ledOFFAverage);
+            if (generatedData.has_value()) {
+                createCSV(generatedData.value(), tempConfig.genericOutput.value());
+            }
+        }
+    }
+}
+
+/*
+ * Iterative average akin to: m_n = i/n * Sum_(i=1)^n a_i
+ * It's to prevent overflow (precaution)
+ * numbers we're normally dealing with range from 0-255
+ * but factor in ~ 30,000 entries leads to a max of 7,650,000 (within range of double)
+ * but better have an infinitely extensible bit of code rather running into an integer overflow issue
+ * which is tough to detect even in C++
+ *
+ * Returns [0, 0, 0, 0] if we run into logs that don't exist
+ * Else returns [mB, mR, mG, 255]
+ * The final channel is A (alpha) which is not used in our videos or analysis
+ */
+cv::Scalar getScalarAverage(const optional<vector<LogEntry>>& logs) {
+    if (logs.has_value()) {
+        int t = 1;
+        double blueAverage = 0;
+        double redAverage = 0;
+        double greenAverage = 0;
+
+        for (LogEntry l : logs.value()) {
+            blueAverage += (l.frameAverage[0] - blueAverage) / t;
+            redAverage += (l.frameAverage[1] - redAverage) / t;
+            greenAverage += (l.frameAverage[2] - greenAverage) / t;
+
+            ++t;
+        }
+
+        return cv::Scalar(blueAverage, redAverage, greenAverage, 255);
+    }
+
+    return cv::Scalar::all(0);
 }
 
 void createCSV(const vector<LogEntry> &logs, const string &filename) {
@@ -262,7 +343,7 @@ void createCSV(const vector<LogEntry> &logs, const string &filename) {
     // frameAverage is of type double[4], we need to destructure it
     for (const LogEntry& entry : logs) {
         csvStream << entry.deltaTime << "," << entry.frameAverage.val[0] << ","<< entry.frameAverage.val[1] << ","
-        << entry.frameAverage.val[2] << "," << entry.deducedBit << "\n";
+        << entry.frameAverage.val[2] << "," << entry.deducedBit.value() << "\n";
     }
 
     csvStream.close();

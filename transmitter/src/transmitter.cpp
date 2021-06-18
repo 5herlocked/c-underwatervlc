@@ -64,7 +64,7 @@ void transmit() {
     int pagesize = getpagesize();
     int pagemask = pagesize-1;
     //  This page will actually contain all the GPIO controllers, because they are co-located
-    void *base = mmap(0, pagesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (GPIO_3 & ~pagemask));
+    void *base = mmap(nullptr, pagesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (GPIO_3 & ~pagemask));
     if (base == nullptr) {
         perror("mmap()");
         exit(1);
@@ -73,12 +73,19 @@ void transmit() {
     //  set up a pointer for convenient access -- this pointer is to the selected GPIO controller
     auto volatile *pin = (GPIO_mem volatile *)((char *)base + (GPIO_3 & pagemask));
 
-    pin->CNF[0] = 0x00ff;
-    pin->OE[0] = 0xff;
-    pin->OUT[0] = 0xff;
+    int port = 0;
+
+    cout << pin->CNF[port] << endl;
+    cout << pin->OE[port] << endl;
+    cout << pin->OUT[port] << endl;
+    cout << pin->INT_ENB[port] << endl;
+
+    pin->CNF[port] = 0x00ff;
+    pin->OE[port] = 0xff;
+    pin->OUT[port] = 0xff;
     //  pin->IN = 0x00; read only
     //  disable interrupts
-    pin->INT_ENB[0] = 0x00;
+    pin->INT_ENB[port] = 0x00;
     //  don't worry about these for now
     //pin->INT_STA[0] = 0x00;
     //pin->INT_LVL[0] = 0x000000;
@@ -90,11 +97,11 @@ void transmit() {
     uint8_t val = 0xff;
     int generatedRecords = 0;
     auto start = std::chrono::high_resolution_clock::now();
-    while (generatedRecords < 100) {
+    while (generatedRecords < 10) {
         generatedRecords++;
         std::this_thread::sleep_for(std::chrono::seconds(1));
         val = val ^ 0xff;
-        pin->OUT[0] = val;
+        pin->OUT[port] = val;
     }
     auto end = std::chrono::high_resolution_clock::now();
 

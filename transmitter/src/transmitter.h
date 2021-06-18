@@ -65,7 +65,7 @@ struct GPIO_mem {
  * 
  * Specifically for this project we're referring to GPIO pin 12
  * that means GPIO03_PJ.07 -> 0x6000d204
- * but to manipulate the specific bit, we need to use GPIO_mem->OUT[4]
+ * but to manipulate the specific bit, we need to use GPIO_mem->OUT[0]
  * Since we need to manipulate bit 07
  */
 
