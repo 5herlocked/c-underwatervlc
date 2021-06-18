@@ -2,9 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 project(analysis_tool)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 4 REQUIRED)
 
 if (NOT WIN32)
     set(SPECIAL_OS_LIBS "pthread" "X11")
