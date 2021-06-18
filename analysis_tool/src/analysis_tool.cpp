@@ -199,11 +199,22 @@ optional<vector<LogEntry>> analyseVideo(Configuration &config, const optional<cv
         double deltaTime = position/fps;
         optional<int> deducedBit = nullopt;
 
+        // TODO: Make the threshold logic smart
         if (ledONVal.has_value() && ledOFFVal.has_value()) {
             // It's a dataset
             // find diff between ledON and ledOFF
             // split the diff to get threshold?
-            // deducedBit = average > threshold ? 1 : average < threshold ? 0 : nullopt
+            // deducedBit = average > threshold ? 1 : average < threshold ? 0 : nullopt;
+            auto threshold = ledONVal.value() - ledOFFVal.value();
+
+            // Refer only to the B of the BRG values
+            if (average[0] > threshold[0]) {
+                deducedBit = 1;
+            } else if (average[0] < threshold[0]) {
+                deducedBit = 0;
+            } else {
+                deducedBit = nullopt;
+            }
         }
 
         // TODO: threshold to find the bit value
