@@ -8,6 +8,7 @@
 #define ANALYSIS_TOOL_UTILS_H
 
 #pragma once
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -15,11 +16,13 @@ static bool exit_app = false;
 
 // Handle the CTRL-C keyboard signal
 #ifdef _WIN32
+
 #include <Windows.h>
 
 void CtrlHandler(DWORD fdwCtrlType) {
     exit_app = (fdwCtrlType == CTRL_C_EVENT);
 }
+
 #else
 #include <csignal>
 
@@ -50,7 +53,7 @@ void progressBar(float ratio, unsigned int w) {
     std::cout << "\r" << std::flush;
 }
 
-bool directoryExists(const std::string& directory) {
+bool directoryExists(const std::string &directory) {
     struct stat info{};
     if (stat(directory.c_str(), &info) != 0)
         return false;
