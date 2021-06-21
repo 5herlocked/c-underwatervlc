@@ -10,13 +10,17 @@
 #include <opencv2/opencv.hpp>
 
 #if __has_include(<filesystem>)
-    #include <filesystem>
-    namespace fs = std::filesystem;
+
+#include <filesystem>
+namespace fs = std::filesystem;
+
 #elif __has_include(<experimental/filesystem>)
-    #include <experimental/filesystem>
-    namespace fs = std::experimental::filesystem;
+
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+
 #else
-    error "Missing the <filesystem> header."
+error "Missing the <filesystem> header."
 #endif
 
 using namespace std;
@@ -46,18 +50,24 @@ struct Configuration {
     optional<std::string> genericOutput;
 };
 
-void parseArgs(int argc, char* argv[], Configuration& config);
-void analyseFolder(Configuration& config);
-optional<vector<LogEntry>> analyseVideo(Configuration &config, const optional<cv::Scalar>& ledONVal = nullopt, const optional<cv::Scalar>& ledOFFVal = nullopt);
-void analyseDataset(Configuration &configuration, const fs::path& ledON, const fs::path& ledOFF);
+void parseArgs(int argc, char *argv[], Configuration &config);
+
+void analyseFolder(Configuration &config);
+
+optional<vector<LogEntry>> analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal = nullopt,
+                                        const optional<cv::Scalar> &ledOFFVal = nullopt);
+
+void analyseDataset(Configuration &configuration, const fs::path &ledON, const fs::path &ledOFF);
+
 void createCSV(const vector<LogEntry> &logs, const string &filename);
+
 void showUsage();
 
-cv::Scalar getScalarAverage(const optional<vector<LogEntry>>& logs);
+cv::Scalar getScalarAverage(const optional<vector<LogEntry>> &logs);
 
 optional<std::string> replaceExtension(const filesystem::path &path);
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     Configuration config{};
     parseArgs(argc, argv, config);
 
@@ -65,7 +75,7 @@ int main(int argc, char* argv[]) {
     // So the std::optional is entirely unnecessary anywhere except for parseArgs
     error_code fs_error;
 
-    switch(config.source.value()) {
+    switch (config.source.value()) {
         case SINGLE_VIDEO:
             // make sure vid exists then send it off to be processed in the proper manner
             if (fs::is_regular_file(config.location.value().c_str(), fs_error)) {
@@ -90,7 +100,7 @@ int main(int argc, char* argv[]) {
     }
 }
 
-void parseArgs(int argc, char* argv[], Configuration& app_config) {
+void parseArgs(int argc, char *argv[], Configuration &app_config) {
     // TODO: Complete parseArgs
     for (int i = 1; i < argc; ++i) {
         // Stores the option
@@ -147,7 +157,8 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
  *      But, it could lead to some slowdown
  *  The more tricky solution would be using complex flag structures which would further complicate maintenance
  */
-optional<vector<LogEntry>> analyseVideo(Configuration &config, const optional<cv::Scalar>& ledONVal, const optional<cv::Scalar>& ledOFFVal) {
+optional<vector<LogEntry>>
+analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const optional<cv::Scalar> &ledOFFVal) {
     cv::VideoCapture video(config.location.value());
     auto frameMeans = vector<LogEntry>();
 
@@ -196,7 +207,7 @@ optional<vector<LogEntry>> analyseVideo(Configuration &config, const optional<cv
         // TODO: Make a vec of scalars that stores our values, then log them
         // This average will be more blue when the LED is on, and less blue when the LED is off
         cv::Scalar average = cv::mean(roiMask);
-        double deltaTime = position/fps;
+        double deltaTime = position / fps;
         optional<int> deducedBit = nullopt;
 
         // TODO: Make the threshold logic smart
@@ -219,11 +230,11 @@ optional<vector<LogEntry>> analyseVideo(Configuration &config, const optional<cv
 
         // TODO: threshold to find the bit value
         frameMeans.push_back(LogEntry{
-            deltaTime,
-            average,
-            deducedBit
+                deltaTime,
+                average,
+                deducedBit
         });
-        progressBar((float)position / totalFrames, 30);
+        progressBar((float) position / totalFrames, 30);
     }
 
     return frameMeans;
@@ -236,7 +247,7 @@ void analyseFolder(Configuration &config) {
     Configuration tempConfig = config;
 
     if (config.app.has_value() && config.app.value() == APP_TYPE::RAW_ANALYSIS) {
-        for (const auto& file : fs::directory_iterator(config.location.value().c_str())) {
+        for (const auto &file : fs::directory_iterator(config.location.value().c_str())) {
             if (file.path().extension() == ".avi") {
                 optional<std::string> temp = file.path().string();
                 optional<std::string> output_val = replaceExtension(file.path());
@@ -254,9 +265,9 @@ void analyseFolder(Configuration &config) {
         fs::path ledOnFile;
         fs::path ledOffFile;
 
-        for (const auto& file : fs::directory_iterator(config.location.value().c_str())) {
+        for (const auto &file : fs::directory_iterator(config.location.value().c_str())) {
             if (file.path().has_extension() && file.path().extension() == ".avi") {
-                const string& filename = file.path().filename().string();
+                const string &filename = file.path().filename().string();
                 if (filename.find("on")) {
                     ledOnFile = file.path();
                 } else if (filename.find("off")) {
@@ -281,7 +292,7 @@ optional<std::string> replaceExtension(const filesystem::path &path) {
     return path.filename().replace_extension().string();
 }
 
-void analyseDataset(Configuration &configuration, const fs::path& ledON, const fs::path& ledOFF) {
+void analyseDataset(Configuration &configuration, const fs::path &ledON, const fs::path &ledOFF) {
     auto tempConfig = configuration;
 
     // Sets up temporary configuration files
@@ -294,7 +305,7 @@ void analyseDataset(Configuration &configuration, const fs::path& ledON, const f
     auto ledOFFAverage = getScalarAverage(analyseVideo(tempConfig));
 
     // iterate through the rest of the directory
-    for (const auto& file : fs::directory_iterator(configuration.location.value().c_str())) {
+    for (const auto &file : fs::directory_iterator(configuration.location.value().c_str())) {
         // Ignore the ON, OFF files
         if (file.path().filename().string().find("on") || file.path().filename().string().find("off")) {
             continue;
@@ -324,7 +335,7 @@ void analyseDataset(Configuration &configuration, const fs::path& ledON, const f
  * Else returns [mB, mR, mG, 255]
  * The final channel is A (alpha) which is not used in our videos or analysis
  */
-cv::Scalar getScalarAverage(const optional<vector<LogEntry>>& logs) {
+cv::Scalar getScalarAverage(const optional<vector<LogEntry>> &logs) {
     if (logs.has_value()) {
         int t = 1;
         double blueAverage = 0;
@@ -349,12 +360,12 @@ void createCSV(const vector<LogEntry> &logs, const string &filename) {
     fstream csvStream;
     csvStream.open(filename, ios::out);
 
-    csvStream << "Delta Time" << "," << "Blue" << "," << "Green" << ","<< "Red" << "," << "Bit" << "\n";
+    csvStream << "Delta Time" << "," << "Blue" << "," << "Green" << "," << "Red" << "," << "Bit" << "\n";
 
     // frameAverage is of type double[4], we need to destructure it
-    for (const LogEntry& entry : logs) {
-        csvStream << entry.deltaTime << "," << entry.frameAverage.val[0] << ","<< entry.frameAverage.val[1] << ","
-        << entry.frameAverage.val[2] << "," << entry.deducedBit.value() << "\n";
+    for (const LogEntry &entry : logs) {
+        csvStream << entry.deltaTime << "," << entry.frameAverage.val[0] << "," << entry.frameAverage.val[1] << ","
+                  << entry.frameAverage.val[2] << "," << entry.deducedBit.value() << "\n";
     }
 
     csvStream.close();
