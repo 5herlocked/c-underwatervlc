@@ -254,14 +254,16 @@ optional<vector<LogEntry>> transmit(const Configuration &config, const vector<in
         logs.push_back(currentEntry);
 
         // sleep for dT
-        this_thread::sleep_for(config.frequency.value() - (chrono::high_resolution_clock::now() - t_i));
+        //this_thread::sleep_for(config.frequency.value() - (chrono::high_resolution_clock::now() - t_i));
     }
 
+    auto timeTaken = (chrono::high_resolution_clock::now() - t_0);
+    cout << "Time taken: " << chrono::duration_cast<chrono::nanoseconds>(timeTaken).count() << " ns" << endl;
     return logs;
 }
 
 void showUsage() {
-
+    cout << ""
 }
 
 // optional TODO: figure out memory manipulation
