@@ -15,11 +15,19 @@
 #include <thread>
 #include <optional>
 #include <iostream>
+#include <vector>
 
 #include "transmitter.h"
 #include "getopt.h"
 #include "unistd.h"
 #include "gpiod.h"
+
+// Change this to move the gpio pin
+// reference: https://www.jetsonhacks.com/nvidia-jetson-nano-2gb-j6-gpio-header-pinout/
+// use the sysfs GPIO name but only the number
+// confirm that the line being used is correct by running the command
+// sudo gpiofind "<name_of_pin>"
+#define OUT 79
 
 using namespace std;
 
@@ -30,9 +38,12 @@ enum APP_TYPE {
     // TODO: Just add elements in here as the app gets more complicated
 };
 
+// Explicitly stating their internal values
+// Though implicitly they mean the same thing
+// GPIO::OFF will be interpreted as 0 when directly referenced.
 enum GPIO {
-    OFF,
-    ON,
+    OFF = 0,
+    ON = 1,
 };
 
 
@@ -43,8 +54,14 @@ struct Configuration {
     optional<APP_TYPE> type{};
     optional<GPIO> state{};
     optional<int> bits{};
-    optional<int> frequency{};
+    optional<chrono::duration<double>> frequency{};
     optional<int> cycles{};
+};
+
+struct LogEntry {
+    chrono::duration<double> deltaTime{};
+    optional<int> transmittedBit{};
+    optional<string> message{};
 };
 
 // function definitions
@@ -52,7 +69,7 @@ void parseArgs(int argc, char **argv, Configuration &config);
 
 // [[maybe_unused]] void transmitRaw(const Configuration &config);
 
-void transmit(const Configuration &config);
+optional<vector<LogEntry>> transmit(const Configuration &config, const vector<int> &transmission);
 
 void setState(const Configuration &config);
 
@@ -60,19 +77,42 @@ void showUsage();
 
 optional<GPIO> toGPIO(const string &input);
 
+vector<int> generateRandomTransmission(const int &value);
+
+optional<chrono::duration<double>> getFrequency(long frequency);
+
 int main(int argc, char *argv[]) {
     Configuration appConfig{};
     parseArgs(argc, argv, appConfig);
 
-    if (appConfig.type.has_value() && appConfig.type.value() == APP_TYPE::STATE) {
-        setState(appConfig);
-    } else if (appConfig.type.has_value() && appConfig.type.value() == APP_TYPE::RANDOM) {
-        transmit(appConfig);
+    optional<vector<LogEntry>> logs = vector<LogEntry>();
+
+    if (appConfig.type.has_value()) {
+        switch (appConfig.type.value()) {
+            case STATE:
+                setState(appConfig);
+                return 0;
+            case RANDOM:
+                logs = transmit(appConfig, generateRandomTransmission(appConfig.bits.value()));
+                break;
+        }
     } else {
-        // Incorrectly configured
+        // Improperly Configured
     }
 
+    // Do logs
+
     return 0;
+}
+
+vector<int> generateRandomTransmission(const int &value) {
+    vector<int> transmission = vector<int>();
+
+    for (int i = 0; i < value; ++i) {
+        transmission.push_back((int)(rand() % 2));
+    }
+
+    return transmission;
 }
 
 /*
@@ -110,12 +150,13 @@ void parseArgs(int argc, char **argv, Configuration &config) {
             case 'r':
                 if (config.type.has_value() && config.type.value() == APP_TYPE::STATE) {
                     cout << "The state flag takes precedence. Ignoring the random bits flag" << endl;
+                    break;
                 }
                 config.type = APP_TYPE::RANDOM;
                 config.bits = strtol(optarg, nullptr, 10);
                 break;
             case 'f':
-                config.frequency = strtol(optarg, nullptr, 10);
+                config.frequency = getFrequency(strtol(optarg, nullptr, 10));
                 break;
             case 'c':
                 config.cycles = strtol(optarg, nullptr, 10);
@@ -125,6 +166,12 @@ void parseArgs(int argc, char **argv, Configuration &config) {
                 break;
         }
     }
+}
+
+optional<chrono::duration<double>> getFrequency(long frequency) {
+    auto frequencyTime = chrono::duration<double>(1/frequency);
+
+    return frequencyTime;
 }
 
 // Goes from string to enum GPIO
@@ -138,21 +185,82 @@ optional<GPIO> toGPIO(const string &input) {
     return nullopt;
 }
 
-void showUsage() {
-
-}
-
 void setState(const Configuration &config) {
+    struct gpiod_chip *chip;
+    struct gpiod_line *pin;
 
+    chip = gpiod_chip_open_by_number(0);
+
+    if (!chip) {
+        cout << "GPIO chip failed to open" << endl;
+        return;
+    }
+
+    // Referring to gpio79 as a part of chip0
+    // guessing that this is gpio board pin 12
+    pin = gpiod_chip_get_line(chip, OUT);
+
+    if (!pin) {
+        cout << "GPIO pin failed to open" << endl;
+        return;
+    }
+
+    gpiod_line_request_output(pin, "transmitter_out", config.state.value());
+
+    cout << "Holding state to " << config.state.value() << endl;
+    cout << "Press Ctrl + C to exit and reset the GPIO pin" << endl;
 }
 
 /*
- * Transmits using the sysfs method of gpio manipulation
+ * Transmits using the libgpiod method of gpio manipulation
  * Should be more than fast enough
  * Reference
  */
+optional<vector<LogEntry>> transmit(const Configuration &config, const vector<int> &transmission) {
+    auto currentEntry = LogEntry{};
+    auto logs = vector<LogEntry>();
 
-void transmit(const Configuration &config) {
+    struct gpiod_chip *chip;
+    struct gpiod_line *pin;
+
+    chip = gpiod_chip_open_by_number(0);
+
+    if (!chip) {
+        cout << "GPIO chip failed to open" << endl;
+        return nullopt;
+    }
+
+    // Referring to gpio79 as a part of chip0
+    // guessing that this is gpio board pin 12
+    pin = gpiod_chip_get_line(chip, OUT);
+
+    if (!pin) {
+        cout << "GPIO pin failed to open" << endl;
+        return nullopt;
+    }
+
+    gpiod_line_request_output(pin, "transmitter_out", 0);
+    auto t_0 = chrono::high_resolution_clock::now();
+
+    for (int i : transmission) {
+        auto t_i = chrono::high_resolution_clock::now();
+
+        gpiod_line_set_value(pin, i);
+
+        // Manage Logs
+        currentEntry.deltaTime = (t_0 - chrono::high_resolution_clock::now());
+        currentEntry.transmittedBit = i;
+        currentEntry.message = nullopt;
+        logs.push_back(currentEntry);
+
+        // sleep for dT
+        this_thread::sleep_for(config.frequency.value() - (chrono::high_resolution_clock::now() - t_i));
+    }
+
+    return logs;
+}
+
+void showUsage() {
 
 }
 
