@@ -21,6 +21,7 @@
 #include "getopt.h"
 #include "unistd.h"
 #include "gpiod.h"
+#include "utils.h"
 
 // Change this to move the gpio pin
 // reference: https://www.jetsonhacks.com/nvidia-jetson-nano-2gb-j6-gpio-header-pinout/
@@ -127,11 +128,11 @@ void parseArgs(int argc, char **argv, Configuration &config) {
             {"state",     required_argument, nullptr, 's'},
             {"random",    optional_argument, nullptr, 'r'},
             {"frequency", required_argument, nullptr, 'f'},
-            {"cycles",    required_argument, nullptr, 'c'},
+            {"cycles",    required_argument, nullptr, 't'},
             {nullptr,     no_argument,       nullptr, 0}
     };
     int optionIdx = 0;
-    while ((opt = getopt_long(argc, argv, "hs:r:f:c:", long_options, &optionIdx)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hs:r:f:t:", long_options, &optionIdx)) != -1) {
         switch (opt) {
             case 0:
                 //TODO: No arguments, default config
@@ -158,7 +159,7 @@ void parseArgs(int argc, char **argv, Configuration &config) {
             case 'f':
                 config.frequency = getFrequency(strtol(optarg, nullptr, 10));
                 break;
-            case 'c':
+            case 't':
                 config.cycles = strtol(optarg, nullptr, 10);
                 break;
             default:
@@ -192,6 +193,7 @@ void setState(const Configuration &config) {
     chip = gpiod_chip_open_by_number(0);
 
     if (!chip) {
+        // if gpio pin failed
         cout << "GPIO chip failed to open" << endl;
         return;
     }
@@ -201,11 +203,21 @@ void setState(const Configuration &config) {
     pin = gpiod_chip_get_line(chip, OUT);
 
     if (!pin) {
+        // if opening pin failed
         cout << "GPIO pin failed to open" << endl;
         return;
     }
 
-    gpiod_line_request_output(pin, "transmitter_out", config.state.value());
+    int pinRequest = gpiod_line_request_output(pin, "transmitter_out", config.state.value());
+    if (!pinRequest) {
+        // If pin request failed
+    }
+
+    int stateRequest = gpiod_line_set_value(pin, config.state.value());
+
+    if (!stateRequest) {
+        // If set State Failed
+    }
 
     cout << "Holding state to " << config.state.value() << endl;
     cout << "Press Ctrl + C to exit and reset the GPIO pin" << endl;
@@ -226,6 +238,7 @@ optional<vector<LogEntry>> transmit(const Configuration &config, const vector<in
     chip = gpiod_chip_open_by_number(0);
 
     if (!chip) {
+        // if chip opening failed
         cout << "GPIO chip failed to open" << endl;
         return nullopt;
     }
@@ -235,26 +248,41 @@ optional<vector<LogEntry>> transmit(const Configuration &config, const vector<in
     pin = gpiod_chip_get_line(chip, OUT);
 
     if (!pin) {
+        // 
         cout << "GPIO pin failed to open" << endl;
         return nullopt;
     }
 
     gpiod_line_request_output(pin, "transmitter_out", 0);
+    auto length = transmission.size();
+    int transmitted = 0, failed = 0;
+
     auto t_0 = chrono::high_resolution_clock::now();
 
     for (int i : transmission) {
         auto t_i = chrono::high_resolution_clock::now();
 
-        gpiod_line_set_value(pin, i);
+        int complete = gpiod_line_set_value(pin, i);
 
-        // Manage Logs
-        currentEntry.deltaTime = (t_0 - chrono::high_resolution_clock::now());
-        currentEntry.transmittedBit = i;
-        currentEntry.message = nullopt;
-        logs.push_back(currentEntry);
+        if (complete != 0) {
+            // Transmission failed
+            failed += 1;
+            currentEntry.deltaTime = (t_0 - chrono::high_resolution_clock::now());
+            currentEntry.transmittedBit = nullopt;
+            currentEntry.message = "Bit dropped";
+            logs.push_back(currentEntry);
+        } else {
+            // Manage Logs
+            transmitted += 1;
+            currentEntry.deltaTime = (t_0 - chrono::high_resolution_clock::now());
+            currentEntry.transmittedBit = i;
+            currentEntry.message = nullopt;
+            logs.push_back(currentEntry);
+        }
 
+        progressBar(((float) (transmitted + failed) / length), 30, transmitted, failed);
         // sleep for dT
-        //this_thread::sleep_for(config.frequency.value() - (chrono::high_resolution_clock::now() - t_i));
+        this_thread::sleep_for(config.frequency.value() - (chrono::high_resolution_clock::now() - t_i));
     }
 
     auto timeTaken = (chrono::high_resolution_clock::now() - t_0);
@@ -263,7 +291,7 @@ optional<vector<LogEntry>> transmit(const Configuration &config, const vector<in
 }
 
 void showUsage() {
-    cout << ""
+    cout << "" << endl;
 }
 
 // optional TODO: figure out memory manipulation
