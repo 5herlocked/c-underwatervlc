@@ -65,7 +65,7 @@ void showUsage();
 
 cv::Scalar getScalarAverage(const optional<vector<LogEntry>> &logs);
 
-optional<std::string> replaceExtension(const filesystem::path &path);
+optional<std::string> replaceExtension(const fs::path &path);
 
 int main(int argc, char *argv[]) {
     Configuration config{};
@@ -112,7 +112,9 @@ void parseArgs(int argc, char *argv[], Configuration &app_config) {
             if (!app_config.source.has_value()) {
                 // If the source hasn't already been declared
                 app_config.source = SOURCE_TYPE::FOLDER;
-                app_config.app = APP_TYPE::RAW_ANALYSIS;
+                if (!app_config.app.has_value()) {
+                    app_config.app = APP_TYPE::RAW_ANALYSIS;
+                }
                 app_config.location = argv[++i];
             } else {
                 cout << "You have attempted to use 2 source flags. Please make up your mind." << endl;
@@ -237,6 +239,8 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
         progressBar((float) position / totalFrames, 30);
     }
 
+    video.release();
+
     return frameMeans;
 }
 
@@ -268,9 +272,9 @@ void analyseFolder(Configuration &config) {
         for (const auto &file : fs::directory_iterator(config.location.value().c_str())) {
             if (file.path().has_extension() && file.path().extension() == ".avi") {
                 const string &filename = file.path().filename().string();
-                if (filename.find("on")) {
+                if (filename.find("on") != string::npos) {
                     ledOnFile = file.path();
-                } else if (filename.find("off")) {
+                } else if (filename.find("off") != string::npos) {
                     ledOffFile = file.path();
                 }
             }
@@ -284,7 +288,7 @@ void analyseFolder(Configuration &config) {
     }
 }
 
-optional<std::string> replaceExtension(const filesystem::path &path) {
+optional<std::string> replaceExtension(const fs::path &path) {
     if (path.empty()) {
         cout << "Path: " << path.string() << " is empty" << endl;
         return nullopt;
@@ -307,7 +311,7 @@ void analyseDataset(Configuration &configuration, const fs::path &ledON, const f
     // iterate through the rest of the directory
     for (const auto &file : fs::directory_iterator(configuration.location.value().c_str())) {
         // Ignore the ON, OFF files
-        if (file.path().filename().string().find("on") || file.path().filename().string().find("off")) {
+        if (file.path().filename().string().find("on") != string::npos || file.path().filename().string().find("off") != string::npos) {
             continue;
         } else if (file.path().extension() == ".avi") {
             optional<std::string> temp = file.path().string();

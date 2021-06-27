@@ -248,7 +248,7 @@ optional<vector<LogEntry>> transmit(const Configuration &config, const vector<in
     pin = gpiod_chip_get_line(chip, OUT);
 
     if (!pin) {
-        // 
+        //
         cout << "GPIO pin failed to open" << endl;
         return nullopt;
     }
