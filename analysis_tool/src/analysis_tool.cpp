@@ -67,6 +67,8 @@ cv::Scalar getScalarAverage(const optional<vector<LogEntry>> &logs);
 
 optional<std::string> replaceExtension(const fs::path &path);
 
+cv::Scalar getAverage(const cv::Scalar &val1, const cv::Scalar &val2);
+
 int main(int argc, char *argv[]) {
     Configuration config{};
     parseArgs(argc, argv, config);
@@ -218,7 +220,7 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
             // find diff between ledON and ledOFF
             // split the diff to get threshold?
             // deducedBit = average > threshold ? 1 : average < threshold ? 0 : nullopt;
-            auto threshold = ledONVal.value() - ledOFFVal.value();
+            auto threshold = getAverage(ledONVal.value(), ledOFFVal.value());
 
             // Refer only to the B of the BRG values
             if (average[0] > threshold[0]) {
@@ -242,6 +244,16 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
     video.release();
 
     return frameMeans;
+}
+
+cv::Scalar getAverage(const cv::Scalar &val1, const cv::Scalar &val2) {
+    cv::Scalar returnVal = cv::Scalar();
+
+    returnVal[0] = (val1[0] + val2[0])/2;
+    returnVal[1] = (val1[1] + val2[1])/2;
+    returnVal[2] = (val1[2] + val2[2])/2;
+
+    return returnVal;
 }
 
 // Pre-conditions: command line options are valid, the folder exists.
@@ -362,7 +374,7 @@ cv::Scalar getScalarAverage(const optional<vector<LogEntry>> &logs) {
 
 void createCSV(const vector<LogEntry> &logs, const string &filename) {
     fstream csvStream;
-    csvStream.open(filename, ios::out);
+    csvStream.open(filename + ".csv", ios::out);
 
     csvStream << "Delta Time" << "," << "Blue" << "," << "Green" << "," << "Red" << "," << "Bit" << "\n";
 
