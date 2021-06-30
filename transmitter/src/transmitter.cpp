@@ -1,7 +1,4 @@
-//
-// Simple GPIO memory-mapped example by Snarky (github.com/jwatte)
-
-// Modified and maintained by Sherlocked (github.com/5herlocked)
+// Maintained by Sherlocked (github.com/5herlocked)
 // For MORSELab as part of his responsibilities
 
 /*
@@ -16,10 +13,9 @@
 #include <optional>
 #include <iostream>
 #include <vector>
+#include <cmath>
 
-#include "transmitter.h"
 #include "getopt.h"
-#include "unistd.h"
 #include "gpiod.h"
 #include "utils.h"
 
@@ -55,12 +51,12 @@ struct Configuration {
     optional<APP_TYPE> type{};
     optional<GPIO> state{};
     optional<int> bits{};
-    optional<chrono::duration<double>> frequency{};
+    optional<double> frequency{};
     optional<int> cycles{};
 };
 
 struct LogEntry {
-    chrono::duration<double> deltaTime{};
+    optional<chrono::duration<double>> deltaTime{};
     optional<int> transmittedBit{};
     optional<string> message{};
 };
@@ -68,20 +64,26 @@ struct LogEntry {
 // function definitions
 void parseArgs(int argc, char **argv, Configuration &config);
 
-// [[maybe_unused]] void transmitRaw(const Configuration &config);
+void setState(const Configuration &config);
 
 optional<vector<LogEntry>> transmit(const Configuration &config, const vector<int> &transmission);
 
-void setState(const Configuration &config);
+void preciseSleep(double seconds);
 
 void showUsage();
 
-optional<GPIO> toGPIO(const string &input);
+optional<double> getFrequency(long frequency);
 
 vector<int> generateRandomTransmission(const int &value);
 
-optional<chrono::duration<double>> getFrequency(long frequency);
+optional<GPIO> toGPIO(const string &input);
 
+// Test functions
+[[maybe_unused]] Configuration getTestConfiguration();
+
+[[maybe_unused]] vector<int> generateBitFlips(int size);
+
+// Runner
 int main(int argc, char *argv[]) {
     Configuration appConfig{};
     parseArgs(argc, argv, appConfig);
@@ -90,30 +92,20 @@ int main(int argc, char *argv[]) {
 
     if (appConfig.type.has_value()) {
         switch (appConfig.type.value()) {
+            case RANDOM:
+                // Do logs
+                logs = transmit(appConfig, generateRandomTransmission(appConfig.bits.value()));
             case STATE:
                 setState(appConfig);
                 return 0;
-            case RANDOM:
-                logs = transmit(appConfig, generateRandomTransmission(appConfig.bits.value()));
                 break;
         }
     } else {
         // Improperly Configured
     }
 
-    // Do logs
 
     return 0;
-}
-
-vector<int> generateRandomTransmission(const int &value) {
-    vector<int> transmission = vector<int>();
-
-    for (int i = 0; i < value; ++i) {
-        transmission.push_back((int)(rand() % 2));
-    }
-
-    return transmission;
 }
 
 /*
@@ -121,7 +113,6 @@ vector<int> generateRandomTransmission(const int &value) {
  * Reference: https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html
  */
 void parseArgs(int argc, char **argv, Configuration &config) {
-    // TODO: make this not use getopt
     int opt;
     struct option long_options[] = {
             {"help",      no_argument,       nullptr, 'h'},
@@ -169,23 +160,7 @@ void parseArgs(int argc, char **argv, Configuration &config) {
     }
 }
 
-optional<chrono::duration<double>> getFrequency(long frequency) {
-    auto frequencyTime = chrono::duration<double>(1/frequency);
-
-    return frequencyTime;
-}
-
-// Goes from string to enum GPIO
-// returns nullopt if the parameter doesn't correspond to on OR off
-optional<GPIO> toGPIO(const string &input) {
-    if (input == "on" || input == "ON") {
-        return GPIO::ON;
-    } else if (input == "off" || input == "OFF") {
-        return GPIO::OFF;
-    }
-    return nullopt;
-}
-
+// Sets the GPIO state to either ON or OFF
 void setState(const Configuration &config) {
     struct gpiod_chip *chip;
     struct gpiod_line *pin;
@@ -254,13 +229,16 @@ optional<vector<LogEntry>> transmit(const Configuration &config, const vector<in
     }
 
     gpiod_line_request_output(pin, "transmitter_out", 0);
-    auto length = transmission.size();
-    int transmitted = 0, failed = 0;
 
+    double frequency = config.frequency.value();
+    auto length = transmission.size() * config.cycles.value();
+    int transmitted = 0, failed = 0;
     auto t_0 = chrono::high_resolution_clock::now();
+    auto prevClock = chrono::high_resolution_clock::now();
+
 
     for (int i : transmission) {
-        auto t_i = chrono::high_resolution_clock::now();
+        auto nextClock = chrono::high_resolution_clock::now();
 
         int complete = gpiod_line_set_value(pin, i);
 
@@ -280,81 +258,107 @@ optional<vector<LogEntry>> transmit(const Configuration &config, const vector<in
             logs.push_back(currentEntry);
         }
 
-        progressBar(((float) (transmitted + failed) / length), 30, transmitted, failed);
-        // sleep for dT
-        this_thread::sleep_for(config.frequency.value() - (chrono::high_resolution_clock::now() - t_i));
+        progressBar((float)transmitted/length, 30, transmitted, failed);
+
+        auto transmitClock = chrono::high_resolution_clock::now();
+
+        double sleepTime = frequency - ((transmitClock - nextClock).count() / 1e9);
+
+
+        // sleep for dT using a spinLock
+        preciseSleep(sleepTime);
     }
 
-    auto timeTaken = (chrono::high_resolution_clock::now() - t_0);
-    cout << "Time taken: " << chrono::duration_cast<chrono::nanoseconds>(timeTaken).count() << " ns" << endl;
+    printf("Transmitted: %i\t Failed: %i\n", transmitted, failed);
     return logs;
+}
+
+/*
+ * Uses a combination of thread_sleep (longer time intervals)
+ * and spinlocks to get as accurate of a sleep time as we can get without overloading the CPU
+ * Assumes thread::sleep_for() has very poor accuracy and compensates for it
+ * Borrowed from: https://blat-blatnik.github.io/computerBear/making-accurate-sleep-function/
+ */
+void preciseSleep(double seconds) {
+    using namespace std::chrono;
+
+    static double estimate = 5e-3;
+    static double mean = 5e-3;
+    static double m2 = 0;
+    static int64_t count = 1;
+
+    while (seconds > estimate) {
+        auto start = high_resolution_clock::now();
+        this_thread::sleep_for(milliseconds(1));
+        auto end = high_resolution_clock::now();
+
+        double observed = (end - start).count() / 1e9;
+        seconds -= observed;
+
+        ++count;
+        double delta = observed - mean;
+        mean += delta / count;
+        m2   += delta * (observed - mean);
+        double stddev = sqrt(m2 / (count - 1));
+        estimate = mean + stddev;
+    }
+
+    // spin lock
+    auto start = high_resolution_clock::now();
+    while ((high_resolution_clock::now() - start).count() / 1e9 < seconds);
 }
 
 void showUsage() {
     cout << "" << endl;
 }
 
-// optional TODO: figure out memory manipulation
-/*
-[[maybe_unused]] void transmitRaw() {
-    long frequency = 1 / 4;
-    //  read physical memory (needs root)
-    int fd = open("/dev/mem", O_RDWR | O_SYNC);
-    if (fd < 0) {
-        perror("/dev/mem");
-        fprintf(stderr, "please run this program as root (for example with sudo)\n");
-        exit(1);
-    }
+// Helper functions
 
-    //  map a particular physical address into our address space
-    int pagesize = getpagesize();
-    int pagemask = pagesize - 1;
-    //  This page will actually contain all the GPIO controllers, because they are co-located
-    void *base = mmap(nullptr, pagesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (GPIO_3 & ~pagemask));
-    if (base == nullptr) {
-        perror("mmap()");
-        exit(1);
-    }
-
-    //  set up a pointer for convenient access -- this pointer is to the selected GPIO controller
-    auto volatile *pin = (GPIO_mem volatile *) ((char *) base + (GPIO_3 & pagemask));
-
-    int port = 0;
-
-    cout << pin->CNF[port] << endl;
-    cout << pin->OE[port] << endl;
-    cout << pin->OUT[port] << endl;
-    cout << pin->INT_ENB[port] << endl;
-
-    pin->CNF[port] = 0x00ff;
-    pin->OE[port] = 0xff;
-    pin->OUT[port] = 0xff;
-    //  pin->IN = 0x00; read only
-    //  disable interrupts
-    pin->INT_ENB[port] = 0x00;
-    //  don't worry about these for now
-    //pin->INT_STA[0] = 0x00;
-    //pin->INT_LVL[0] = 0x000000;
-    //pin->INT_CLR[0] = 0xffffff;
-
-    fprintf(stderr, "press ctrl-C to stop\n");
-
-    //  "blink" the output values
-    uint8_t val = 0xff;
-    int generatedRecords = 0;
-    auto start = std::chrono::high_resolution_clock::now();
-    while (generatedRecords < 10) {
-        generatedRecords++;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        val = val ^ 0xff;
-        pin->OUT[port] = val;
-    }
-    auto end = std::chrono::high_resolution_clock::now();
-
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    printf("Generated Records: %d. Time taken: %ld ms\n", generatedRecords, duration.count());
-
-    munmap(base, pagesize);
-    close(fd);
+optional<double> getFrequency(long frequency) {
+    return (1.0/frequency);
 }
-*/
+
+vector<int> generateRandomTransmission(const int &value) {
+    vector<int> transmission = vector<int>();
+
+    for (int i = 0; i < value; ++i) {
+        transmission.push_back((int)(rand() % 2));
+    }
+
+    return transmission;
+}
+
+// Goes from string to enum GPIO
+// returns nullopt if the parameter doesn't correspond to on OR off
+optional<GPIO> toGPIO(const string &input) {
+    if (input == "on" || input == "ON") {
+        return GPIO::ON;
+    } else if (input == "off" || input == "OFF") {
+        return GPIO::OFF;
+    }
+    return nullopt;
+}
+
+// Modify this code to run validation tests
+[[maybe_unused]] Configuration getTestConfiguration() {
+    Configuration testConfig{};
+
+    testConfig.type = APP_TYPE::RANDOM;
+    testConfig.frequency = getFrequency(30'000);
+    testConfig.bits = 100'000;
+    testConfig.cycles = 1;
+
+    return testConfig;
+}
+
+// Creates bit flips so that we can purely test the potency of the application
+[[maybe_unused]] vector<int> generateBitFlips(int size) {
+    vector<int> transmission = vector<int>();
+    int val = 0;
+    for (int i = 0; i < size; i++) {
+        transmission.push_back(val);
+        val = val ^ 1;
+    }
+
+    return transmission;
+}
