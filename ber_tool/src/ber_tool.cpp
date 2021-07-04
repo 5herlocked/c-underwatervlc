@@ -15,15 +15,16 @@
 #include <iostream>
 #include <fstream>
 #include <optional>
-#include <charconv>
 
 
 #include "utils.h"
-#include "CSVRow.h"
+#include "csv.h"
 
 #if __has_include(<filesystem>)
 
 #include <filesystem>
+#include <sstream>
+
 namespace fs = std::filesystem;
 
 #elif __has_include(<experimental/filesystem>)
@@ -37,6 +38,18 @@ error "Missing the <filesystem> header."
 
 using namespace std;
 
+struct TransmitterLog {
+    optional<chrono::duration<double>> deltaTime{};
+    optional<int> transmittedBit{};
+    optional<string> message{};
+};
+
+struct ReceiverLog {
+    double deltaTime{};
+    double colourVals[3]{};
+    optional<int> deducedBit{};
+};
+
 struct Configuration {
     optional<string> receiverFile;
     optional<string> transmitterFile;
@@ -46,7 +59,13 @@ struct Configuration {
 
 void parseArgs(int argc, char *argv[], Configuration &config);
 
-double getBer(fstream &transmitterFile, fstream &receiverFile, int recRatio);
+double getBer(const Configuration &appConfig, fstream &transmitterFile, fstream &receiverFile);
+
+vector<TransmitterLog> getTransmitterLogs(const string &fileName, fstream &transmitterLogs);
+
+vector<ReceiverLog> getReceiverLogs(const string &fileName, fstream &receiverLogs);
+
+int getTransmissionStart(const vector<TransmitterLog> &transmitter, const vector<ReceiverLog> &receiver, int recRatio = 1);
 
 int main(int argc, char *argv[]) {
     Configuration config{};
@@ -68,53 +87,71 @@ int main(int argc, char *argv[]) {
     // Make sure the receiver file is actually there
 
     // Get BER value
-    double berValue = getBer(transmitterCSV, receiverCSV, 0);
+    double berValue = getBer(config, transmitterCSV, receiverCSV);
 }
 
 void parseArgs(int argc, char **argv, Configuration &config) {
-    std::string_view values = "new stuff";
+
 }
 
-double getBer(fstream &transmitterFile, fstream &receiverFile, int recRatio) {
-    CSVIterator<double> transIter(transmitterFile);
-    CSVIterator<double> recIter(receiverFile);
+/*
+ * Theory Crafting time:
+ *  Ingest the log files so that they're stored in heap
+ *  Access them through vecs so it's super easy to window the data
+ */
+double getBer(const Configuration &appConfig, fstream &transmitterFile, fstream &receiverFile) {
+    vector<TransmitterLog> transmitterLogs = getTransmitterLogs(appConfig.transmitterFile.value(), transmitterFile);
+    vector<ReceiverLog> receiverLogs = getReceiverLogs(appConfig.receiverFile.value(), receiverFile);
 
+    int recRatio = appConfig.receiveRate/appConfig.transmitRate;
+
+    int startOfTransmission = getTransmissionStart(transmitterLogs, receiverLogs, recRatio);
+
+    // After we get valid and failed bits from above
     double ber = 0;
 
-    while (transIter != CSVIterator<double>()) {
-        int transmittedBit;
-        CSVRow<double> curRow = (*transIter);
-
-        auto result = from_chars(curRow[2].data(), curRow[2].data() + curRow[2].size(), transmittedBit);
-
-        if (result.ec == std::errc::invalid_argument) {
-            cout << "Could not convert" << endl;
-            continue;
-        }
-
-        int deducedBits[recRatio];
-
-        // populate the deduced bits
-        for (int i = 0; i < recRatio; ++i) {
-            CSVRow<double> recCurRow = (*recIter);
-
-        }
-    }
-
-    for (CSVIterator<double> transLoop(transmitterFile); transLoop != CSVIterator<double>(); ++transLoop) {
-        for (CSVIterator<double> recLoop(receiverFile); recLoop != CSVIterator<double>(); recLoop += recRatio) {
-            int deducedBits[recRatio];
-            transIter = *transLoop;
-            for (int i = 0; i < recRatio; ++i) {
-                auto result = from_chars(transIter[3].data(), transIter[3].data() + transIter[3].size(), deducedBit);
-
-                if (result.ec == std::errc::invalid_argument) {
-                    cout << "Could not convert" << endl;
-                    continue;
-                }
-                transIter.readNextRow()
-            }
-        }
-    }
     return ber;
 }
+
+int getTransmissionStart(const vector<TransmitterLog> &transmitter, const vector<ReceiverLog> &receiver, int recRatio) {
+    bool found = false;
+
+    int trackingNum = 3;
+
+    // Create a pattern to match for
+    std::ostringstream stringStream;
+
+    // Create the pattern
+    for (int i = 0; i < trackingNum; i += recRatio) {
+        for (int j = 0; j < recRatio; ++j) {
+            stringStream << transmitter[i].transmittedBit.value();
+        }
+    }
+    // Using this pattern to find the start
+    string startPattern(stringStream.str());
+    stringStream.clear();
+
+    for (int i = 0; i < trackingNum; i += recRatio) {
+        for (int j = 0; j < recRatio; ++j) {
+            stringStream << 
+        }
+    }
+
+    // Here, we have a tracking pattern ready to go
+    // Just find the tracking pattern
+    return 0;
+}
+
+vector<TransmitterLog> getTransmitterLogs(const string &fileName, fstream &transmitterLogs) {
+    io::LineReader transmitterCSV(fileName, transmitterLogs);
+
+    return vector<TransmitterLog>();
+}
+
+vector<ReceiverLog> getReceiverLogs(const string &fileName, fstream &receiverLogs) {
+    io::LineReader receiverCSV(fileName, receiverLogs);
+
+    return vector<ReceiverLog>();
+}
+
+
