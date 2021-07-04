@@ -65,7 +65,8 @@ vector<TransmitterLog> getTransmitterLogs(const string &fileName, fstream &trans
 
 vector<ReceiverLog> getReceiverLogs(const string &fileName, fstream &receiverLogs);
 
-int getTransmissionStart(const vector<TransmitterLog> &transmitter, const vector<ReceiverLog> &receiver, int recRatio = 1);
+long
+getTransmissionStart(const vector<TransmitterLog> &transmitter, const vector<ReceiverLog> &receiver, int recRatio = 1);
 
 int main(int argc, char *argv[]) {
     Configuration config{};
@@ -113,33 +114,35 @@ double getBer(const Configuration &appConfig, fstream &transmitterFile, fstream 
     return ber;
 }
 
-int getTransmissionStart(const vector<TransmitterLog> &transmitter, const vector<ReceiverLog> &receiver, int recRatio) {
-    bool found = false;
-
+long getTransmissionStart(const vector<TransmitterLog> &transmitter, const vector<ReceiverLog> &receiver, int recRatio) {
     int trackingNum = 3;
 
     // Create a pattern to match for
-    std::ostringstream stringStream;
+    std::ostringstream stringConstructor;
 
     // Create the pattern
     for (int i = 0; i < trackingNum; i += recRatio) {
         for (int j = 0; j < recRatio; ++j) {
-            stringStream << transmitter[i].transmittedBit.value();
+            stringConstructor << transmitter[i].transmittedBit.value();
         }
     }
     // Using this pattern to find the start
-    string startPattern(stringStream.str());
-    stringStream.clear();
+    string startPattern(stringConstructor.str());
+    stringConstructor.clear();
 
-    for (int i = 0; i < trackingNum; i += recRatio) {
-        for (int j = 0; j < recRatio; ++j) {
-            stringStream << 
-        }
+    for (int i = 0; i < trackingNum * recRatio * 100; ++i) {
+        stringConstructor << receiver[i].deducedBit.value();
+    }
+    // Just find the tracking pattern
+    string receiverString(stringConstructor.str());
+
+    auto found = receiverString.find(startPattern);
+
+    if (found != string::npos) {
+        return found;
     }
 
-    // Here, we have a tracking pattern ready to go
-    // Just find the tracking pattern
-    return 0;
+    return -1;
 }
 
 vector<TransmitterLog> getTransmitterLogs(const string &fileName, fstream &transmitterLogs) {

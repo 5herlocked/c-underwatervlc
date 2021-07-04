@@ -391,7 +391,7 @@ void createCSV(const vector<LogEntry> &logs, const string &filename) {
 void showUsage() {
     // TODO: Fill out help section
     cout << "./analysis_tool -d -f <file_path> -d <folder_path> -o <output_name>" << endl;
-    cout << "-d or --dataset\t: Sets the dataset flag and stipulates that the included folder path contains a full "
+    cout << "-s or --dataset\t: Sets the dataset flag and stipulates that the included folder path contains a full "
             "dataset that can be analysed contextually" << endl;
     cout << "-f or --file\t: File path of the avi file you want to analyse" << endl;
     cout << "-d or --folder\t: Path to a folder with svos to be analysed" << endl;
