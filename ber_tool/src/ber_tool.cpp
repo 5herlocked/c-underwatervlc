@@ -15,15 +15,13 @@
 #include <iostream>
 #include <fstream>
 #include <optional>
-
+#include <filesystem>
+#include <sstream>
 
 #include "utils.h"
 #include "csv.h"
 
 #if __has_include(<filesystem>)
-
-#include <filesystem>
-#include <sstream>
 
 namespace fs = std::filesystem;
 
@@ -45,7 +43,7 @@ struct TransmitterLog {
 };
 
 struct ReceiverLog {
-    double deltaTime{};
+    chrono::duration<double> deltaTime{};
     double colourVals[3]{};
     optional<int> deducedBit{};
 };
@@ -106,7 +104,7 @@ double getBer(const Configuration &appConfig, fstream &transmitterFile, fstream 
 
     int recRatio = appConfig.receiveRate/appConfig.transmitRate;
 
-    int startOfTransmission = getTransmissionStart(transmitterLogs, receiverLogs, recRatio);
+    long startOfTransmission = getTransmissionStart(transmitterLogs, receiverLogs, recRatio);
 
     // After we get valid and failed bits from above
     double ber = 0;
@@ -146,15 +144,47 @@ long getTransmissionStart(const vector<TransmitterLog> &transmitter, const vecto
 }
 
 vector<TransmitterLog> getTransmitterLogs(const string &fileName, fstream &transmitterLogs) {
-    io::LineReader transmitterCSV(fileName, transmitterLogs);
+    vector<TransmitterLog> transmitter = vector<TransmitterLog>();
+    io::CSVReader<3> transmitterCSV(fileName, transmitterLogs);
 
-    return vector<TransmitterLog>();
+    transmitterCSV.read_header(io::ignore_extra_column | io::ignore_missing_column, "deltaTime", "bit", "message");
+
+    double deltaTime; int bit; string message;
+
+    auto logRef = TransmitterLog{};
+
+    while (transmitterCSV.read_row(deltaTime, bit, message)) {
+        logRef.deltaTime = chrono::duration<double>(deltaTime);
+        logRef.transmittedBit = bit;
+        logRef.message = message;
+
+        transmitter.push_back(logRef);
+    }
+
+    return transmitter;
 }
 
 vector<ReceiverLog> getReceiverLogs(const string &fileName, fstream &receiverLogs) {
-    io::LineReader receiverCSV(fileName, receiverLogs);
+    vector<ReceiverLog> receiver = vector<ReceiverLog>();
+    io::CSVReader<5> receiverCSV(fileName, receiverLogs);
 
-    return vector<ReceiverLog>();
+    receiverCSV.read_header(io::ignore_extra_column | io::ignore_missing_column, "Delta Time", "Blue", "Green", "Red", "Bit");
+
+    double deltaTime; double blue; double green; double red; int bit;
+
+    auto logRef = ReceiverLog{};
+
+    while (receiverCSV.read_row(deltaTime, blue, green, red, bit)) {
+        logRef.deltaTime = chrono::duration<double>(deltaTime);
+        logRef.colourVals[0] = blue;
+        logRef.colourVals[1] = green;
+        logRef.colourVals[2] = blue;
+        logRef.deducedBit = bit;
+
+        receiver.push_back(logRef);
+    }
+
+    return receiver;
 }
 
 
