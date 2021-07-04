@@ -53,6 +53,7 @@ struct Configuration {
     optional<int> bits{};
     optional<double> frequency{};
     optional<int> cycles{};
+    string fileName{};
 };
 
 struct LogEntry {
@@ -69,6 +70,8 @@ void setState(const Configuration &config);
 optional<vector<LogEntry>> transmit(const Configuration &config, const vector<int> &transmission);
 
 void preciseSleep(double seconds);
+
+void generateCSV(const vector<LogEntry>& logs);
 
 void showUsage();
 
@@ -119,11 +122,12 @@ void parseArgs(int argc, char **argv, Configuration &config) {
             {"state",     required_argument, nullptr, 's'},
             {"random",    optional_argument, nullptr, 'r'},
             {"frequency", required_argument, nullptr, 'f'},
-            {"cycles",    required_argument, nullptr, 't'},
+            {"cycles",    required_argument, nullptr, 'c'},
+            {"output",    optional_argument, nullptr, 'o'},
             {nullptr,     no_argument,       nullptr, 0}
     };
     int optionIdx = 0;
-    while ((opt = getopt_long(argc, argv, "hs:r:f:t:", long_options, &optionIdx)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hs:r:f:c:", long_options, &optionIdx)) != -1) {
         switch (opt) {
             case 0:
                 //TODO: No arguments, default config
@@ -152,6 +156,9 @@ void parseArgs(int argc, char **argv, Configuration &config) {
                 break;
             case 't':
                 config.cycles = strtol(optarg, nullptr, 10);
+                break;
+            case 'o':
+                config.output = opt;
                 break;
             default:
                 cout << "Unknown option: <" << opt << endl;
@@ -308,8 +315,23 @@ void preciseSleep(double seconds) {
     while ((high_resolution_clock::now() - start).count() / 1e9 < seconds);
 }
 
+void generateCSV(vector<LogEntry> logs, ) {
+    fstream csvStream();
+    csvStream.open(filename + ".csv", ios::out);
+
+    csvStream << "deltaTime" << "," << "bit" << "," << "message" << "\n";
+
+    // frameAverage is of type double[4], we need to destructure it
+    for (const LogEntry &entry : logs) {
+        csvStream << entry.deltaTime << "," << entry.transmittedBit << "," << entry.message << "\n";
+    }
+
+    csvStream.close();
+}
+
 void showUsage() {
-    cout << "" << endl;
+    printf("./transmitter -s <state> -r <bits> -f <frequency> -c <cycles> -o <output_name>\n");
+
 }
 
 // Helper functions

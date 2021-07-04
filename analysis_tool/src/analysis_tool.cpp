@@ -376,7 +376,7 @@ void createCSV(const vector<LogEntry> &logs, const string &filename) {
     fstream csvStream;
     csvStream.open(filename + ".csv", ios::out);
 
-    csvStream << "Delta Time" << "," << "Blue" << "," << "Green" << "," << "Red" << "," << "Bit" << "\n";
+    csvStream << "deltaTime" << "," << "blue" << "," << "green" << "," << "red" << "," << "bit" << "\n";
 
     // frameAverage is of type double[4], we need to destructure it
     for (const LogEntry &entry : logs) {
