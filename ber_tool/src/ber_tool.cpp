@@ -77,10 +77,11 @@ int main(int argc, char *argv[]) {
 
     if (transmitterCSV.fail()) {
         // Transmitter file broke
+        printf("Transmitter File not working %s\n", config.transmitterFile.value().c_str());
     }
-
     if (receiverCSV.fail()) {
         // Receiver file broke
+        printf("Receiver File not working %s\n", config.receiverFile.value().c_str());
     }
 
     // Make sure the receiver file is actually there
@@ -108,6 +109,17 @@ double getBer(const Configuration &appConfig, fstream &transmitterFile, fstream 
 
     // After we get valid and failed bits from above
     double ber = 0;
+    int receiverTracker = 0;
+    for (int t = 0; t < transmitterLogs.size(); ++t) {
+        int tBit = transmitterLogs[t].transmittedBit.value();
+        int receivedBits[recRatio];
+        for (int r = receiverTracker; r < recRatio; ++r) {
+            optional<int> receivedBit = receiverLogs[r].deducedBit;
+            if (receivedBit.has_value() && ) {
+
+            }
+        }
+    }
 
     return ber;
 }
