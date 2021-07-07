@@ -66,6 +66,8 @@ vector<ReceiverLog> getReceiverLogs(const string &fileName, fstream &receiverLog
 long
 getTransmissionStart(const vector<TransmitterLog> &transmitter, const vector<ReceiverLog> &receiver, int recRatio = 1);
 
+void showUsage();
+
 int main(int argc, char *argv[]) {
     Configuration config{};
     parseArgs(argc, argv, config);
@@ -88,10 +90,30 @@ int main(int argc, char *argv[]) {
 
     // Get BER value
     double berValue = getBer(config, transmitterCSV, receiverCSV);
+
+    printf("BER Value: %.2lf%%\n", berValue);
 }
 
 void parseArgs(int argc, char **argv, Configuration &config) {
-
+    for (int i = 1; i < argc; ++i) {
+        string arg = argv[i];
+        if ((arg == "-h") || (arg == "--help")) {
+            showUsage();
+            exit(0);
+        } else if ((arg == "-r") || (arg == "--receiver")) {
+            fs::path file_path = argv[++i];
+            config.receiverFile = file_path.string();
+        } else if ((arg == "-t") || (arg == "--transmitter")) {
+            fs::path file_path = argv[++i];
+            config.transmitterFile = file_path.string();
+        } else if ((arg == "-tx") || (arg == "--trxrate")) {
+            config.transmitRate = strtol(argv[++i], nullptr, 10);
+        } else if ((arg == "-rx") || (arg == "--rxrate")) {
+            config.receiveRate = strtol(argv[++i], nullptr, 10);
+        } else {
+            printf("Unknown options: %s, Unknown argument: %s", arg.c_str(), argv[++i]);
+        }
+    }
 }
 
 /*
@@ -105,30 +127,47 @@ double getBer(const Configuration &appConfig, fstream &transmitterFile, fstream 
 
     int recRatio = appConfig.receiveRate/appConfig.transmitRate;
 
-    long startOfTransmission = getTransmissionStart(transmitterLogs, receiverLogs, recRatio);
-
     // After we get valid and failed bits from above
-    double ber = 0;
-    int receiverTracker = 0;
-    for (int t = 0; t < transmitterLogs.size(); ++t) {
-        int tBit = transmitterLogs[t].transmittedBit.value();
-        int receivedBits[recRatio];
-        for (int r = receiverTracker; r < recRatio; ++r) {
-            optional<int> receivedBit = receiverLogs[r].deducedBit;
-            if (receivedBit.has_value() && ) {
+    int success = 0, failed = 0;
+    int receiverStart = getTransmissionStart(transmitterLogs, receiverLogs, recRatio);
+    int* receivedBits = new int[recRatio];
+    for (auto & transmitterLog : transmitterLogs) {
+        int tBit = transmitterLog.transmittedBit.value();
+        int iSucc = 0, iFail = 0;
 
+        for (int r = 0; r < recRatio; ++r) {
+            optional<int> rBit = receiverLogs[receiverStart + r].deducedBit;
+            if (rBit.has_value()) {
+                if (rBit.value() == tBit) {
+                    iSucc += 1;
+                } else {
+                    iFail += 1;
+                }
+                receivedBits[r] = rBit.value();
             }
+        }
+
+        receiverStart += recRatio;
+
+        if (iSucc < recRatio/2) {
+            failed += 1;
+        } else {
+            success += 1;
         }
     }
 
-    return ber;
+    if (failed == 0) {
+        return 100;
+    } else {
+        return (double)(success/failed) * 100;
+    }
 }
 
 long getTransmissionStart(const vector<TransmitterLog> &transmitter, const vector<ReceiverLog> &receiver, int recRatio) {
     int trackingNum = 3;
 
     // Create a pattern to match for
-    std::ostringstream stringConstructor;
+    ostringstream stringConstructor;
 
     // Create the pattern
     for (int i = 0; i < trackingNum; i += recRatio) {
@@ -138,7 +177,7 @@ long getTransmissionStart(const vector<TransmitterLog> &transmitter, const vecto
     }
     // Using this pattern to find the start
     string startPattern(stringConstructor.str());
-    stringConstructor.clear();
+    stringConstructor = ostringstream();
 
     for (int i = 0; i < trackingNum * recRatio * 100; ++i) {
         stringConstructor << receiver[i].deducedBit.value();
@@ -148,11 +187,8 @@ long getTransmissionStart(const vector<TransmitterLog> &transmitter, const vecto
 
     auto found = receiverString.find(startPattern);
 
-    if (found != string::npos) {
-        return found;
-    }
+    return found != string::npos ? found : -1;
 
-    return -1;
 }
 
 vector<TransmitterLog> getTransmitterLogs(const string &fileName, fstream &transmitterLogs) {
@@ -197,6 +233,10 @@ vector<ReceiverLog> getReceiverLogs(const string &fileName, fstream &receiverLog
     }
 
     return receiver;
+}
+
+void showUsage() {
+
 }
 
 
