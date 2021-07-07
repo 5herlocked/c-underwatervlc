@@ -128,39 +128,36 @@ double getBer(const Configuration &appConfig, fstream &transmitterFile, fstream 
     int recRatio = appConfig.receiveRate/appConfig.transmitRate;
 
     // After we get valid and failed bits from above
-    int success = 0, failed = 0;
+    int receiverL = receiverLogs.size();
+    int success = 0;
     int receiverStart = getTransmissionStart(transmitterLogs, receiverLogs, recRatio);
     int* receivedBits = new int[recRatio];
     for (auto & transmitterLog : transmitterLogs) {
         int tBit = transmitterLog.transmittedBit.value();
-        int iSucc = 0, iFail = 0;
+        int iSucc = 0;
 
         for (int r = 0; r < recRatio; ++r) {
-            optional<int> rBit = receiverLogs[receiverStart + r].deducedBit;
-            if (rBit.has_value()) {
-                if (rBit.value() == tBit) {
-                    iSucc += 1;
-                } else {
-                    iFail += 1;
+            if (receiverStart + r < receiverL) {
+                optional<int> rBit = receiverLogs[receiverStart + r].deducedBit;
+                if (rBit.has_value()) {
+                    if (rBit.value() == tBit) {
+                        iSucc += 1;
+                    }
+                    receivedBits[r] = rBit.value();
                 }
-                receivedBits[r] = rBit.value();
+            } else {
+                goto vecOverflow;
             }
         }
 
         receiverStart += recRatio;
 
-        if (iSucc < recRatio/2) {
-            failed += 1;
-        } else {
+        if (iSucc >= recRatio/2) {
             success += 1;
         }
     }
-
-    if (failed == 0) {
-        return 100;
-    } else {
-        return (double)(success/failed) * 100;
-    }
+vecOverflow:
+        return (double)success/transmitterLogs.size() * 100;
 }
 
 long getTransmissionStart(const vector<TransmitterLog> &transmitter, const vector<ReceiverLog> &receiver, int recRatio) {
