@@ -75,7 +75,7 @@ optional<vector<LogEntry>> transmit(const Configuration &config, const vector<in
 
 void preciseSleep(double seconds);
 
-void generateCSV(const vector<LogEntry>& logs, Configuration appConfig);
+void generateCSV(const vector<LogEntry>& logs, const Configuration &appConfig);
 
 void showUsage();
 
@@ -353,7 +353,7 @@ void showUsage() {
 void signalHandler(int signal) {
     // TODO: Create the Signal Handler and finish the code for that
     // Usually just gpio cleanup and such
-    gSignalStatus = signal;
+
 }
 
 // Helper functions
