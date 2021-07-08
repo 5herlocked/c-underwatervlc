@@ -53,6 +53,8 @@ struct Configuration {
     optional<string> transmitterFile;
     int transmitRate{};
     int receiveRate{};
+    int recRatio{};
+    int precision{};
 };
 
 void parseArgs(int argc, char *argv[], Configuration &config);
@@ -64,7 +66,8 @@ vector<TransmitterLog> getTransmitterLogs(const string &fileName, fstream &trans
 vector<ReceiverLog> getReceiverLogs(const string &fileName, fstream &receiverLogs);
 
 long
-getTransmissionStart(const vector<TransmitterLog> &transmitter, const vector<ReceiverLog> &receiver, int recRatio = 1);
+getTransmissionStart(const Configuration &appConfig, const vector<TransmitterLog> &transmitter,
+                     const vector<ReceiverLog> &receiver);
 
 void showUsage();
 
@@ -72,21 +75,19 @@ int main(int argc, char *argv[]) {
     Configuration config{};
     parseArgs(argc, argv, config);
 
-    error_code fs_error;
-
     fstream transmitterCSV (config.transmitterFile.value());
     fstream receiverCSV (config.receiverFile.value());
 
     if (transmitterCSV.fail()) {
         // Transmitter file broke
         printf("Transmitter File not working %s\n", config.transmitterFile.value().c_str());
+        exit(-1);
     }
     if (receiverCSV.fail()) {
         // Receiver file broke
         printf("Receiver File not working %s\n", config.receiverFile.value().c_str());
+        exit(-1);
     }
-
-    // Make sure the receiver file is actually there
 
     // Get BER value
     double berValue = getBer(config, transmitterCSV, receiverCSV);
@@ -127,11 +128,14 @@ double getBer(const Configuration &appConfig, fstream &transmitterFile, fstream 
 
     int recRatio = appConfig.receiveRate/appConfig.transmitRate;
 
+    bool vecOverflow = false;
+
     // After we get valid and failed bits from above
     int receiverL = receiverLogs.size();
     int success = 0;
-    int receiverStart = getTransmissionStart(transmitterLogs, receiverLogs, recRatio);
+    int receiverStart = getTransmissionStart(appConfig, transmitterLogs, receiverLogs);
     int* receivedBits = new int[recRatio];
+
     for (auto & transmitterLog : transmitterLogs) {
         int tBit = transmitterLog.transmittedBit.value();
         int iSucc = 0;
@@ -146,7 +150,7 @@ double getBer(const Configuration &appConfig, fstream &transmitterFile, fstream 
                     receivedBits[r] = rBit.value();
                 }
             } else {
-                goto vecOverflow;
+                vecOverflow = true;
             }
         }
 
@@ -156,18 +160,30 @@ double getBer(const Configuration &appConfig, fstream &transmitterFile, fstream 
             success += 1;
         }
     }
-vecOverflow:
-        return (double)success/transmitterLogs.size() * 100;
+
+    if (vecOverflow){
+        printf("Transmission Failed\n");
+    }
+
+    return (double)success/transmitterLogs.size() * 100;
 }
 
-long getTransmissionStart(const vector<TransmitterLog> &transmitter, const vector<ReceiverLog> &receiver, int recRatio) {
-    int trackingNum = 3;
+/*
+ * Constructs a string pattern from the first n bits of the transmitter logs
+ * The multiples them by the recRatio to find the actual tracking pattern
+ * Then uses string.find() to find the tracking patterns start position in the receiver string
+ * allowing us to find the start position in O(n)
+ */
+long getTransmissionStart(const Configuration &appConfig, const vector<TransmitterLog> &transmitter,
+                          const vector<ReceiverLog> &receiver) {
+    int precision = appConfig.precision;
+    int recRatio = appConfig.recRatio;
 
     // Create a pattern to match for
     ostringstream stringConstructor;
 
     // Create the pattern
-    for (int i = 0; i < trackingNum; i += recRatio) {
+    for (int i = 0; i < precision; i += recRatio) {
         for (int j = 0; j < recRatio; ++j) {
             stringConstructor << transmitter[i].transmittedBit.value();
         }
@@ -176,7 +192,7 @@ long getTransmissionStart(const vector<TransmitterLog> &transmitter, const vecto
     string startPattern(stringConstructor.str());
     stringConstructor = ostringstream();
 
-    for (int i = 0; i < trackingNum * recRatio * 100; ++i) {
+    for (int i = 0; i < precision * recRatio * 100; ++i) {
         stringConstructor << receiver[i].deducedBit.value();
     }
     // Just find the tracking pattern
@@ -233,7 +249,11 @@ vector<ReceiverLog> getReceiverLogs(const string &fileName, fstream &receiverLog
 }
 
 void showUsage() {
-
+    printf("./ber_tool -r <receiver_file> -rx <receiver_rate> -t <transmitter_file> -tx <transmitter_rate>\n");
+    printf("-r or --receiver\t: Define the location of the receiver file\n");
+    printf("-rx or --rxrate\t: Define the rate of the receiver\n");
+    printf("-t or --transmitter\t: Define the location of the transmitter file\n");
+    printf("-tx or --txrate\t: Define the rat eof the transmitter\n");
 }
 
 
