@@ -9,35 +9,35 @@
 
 using namespace std;
 
+struct Configuration {
+    sl::InitParameters initParameters;
+    int frameRate{};
+    string fileName{};
+};
+
 void showUsage();
-void print(const string& msg_prefix, ERROR_CODE err_code = ERROR_CODE::SUCCESS, const string& msg_suffix = "");
-void parseArgs(int argc, char *argv[], InitParameters &param, string& file_name);
-void getResFrameRate(const string& resStr, const string& frameStr, InitParameters& param);
-int getValidFrameRate(RESOLUTION resolution, int rate);
+void print(const string& msg_prefix, sl::ERROR_CODE err_code = sl::ERROR_CODE::SUCCESS, const string& msg_suffix = "");
+void parseArgs(int argc, char *argv[], Configuration& config);
+void getResFrameRate(const string& resStr, const string& frameStr, sl::InitParameters& param);
+int getValidFrameRate(sl::RESOLUTION resolution, int rate);
 
 int main(int argc, char *argv[]) {
-    Camera zed;
-
-    InitParameters init;
-    init.camera_resolution = RESOLUTION::VGA;
-    init.camera_fps = 100;
-    init.depth_mode = DEPTH_MODE::ULTRA;
-    init.coordinate_units = UNIT::MILLIMETER;
-    init.coordinate_system = COORDINATE_SYSTEM::RIGHT_HANDED_Y_UP;
-
-    string fileName;
-    parseArgs(argc, argv, init, fileName);
-
-    // TODO: the actual record loop
+    Configuration config;
+    parseArgs(argc, argv, config);
 }
 
-void print(const string& msg_prefix, ERROR_CODE err_code, const string& msg_suffix) {
-    if (err_code != ERROR_CODE::SUCCESS)
+void record(const Configuration& appConfig) {
+    sl::Camera zed;
+
+}
+
+void print(const string& msg_prefix, sl::ERROR_CODE err_code, const string& msg_suffix) {
+    if (err_code != sl::ERROR_CODE::SUCCESS)
         cout << "[Error] ";
     else
         cout << " ";
     cout << msg_prefix << " ";
-    if (err_code != ERROR_CODE::SUCCESS) {
+    if (err_code != sl::ERROR_CODE::SUCCESS) {
         cout << " | " << toString(err_code) << " : ";
         cout << toVerbose(err_code);
     }
@@ -46,7 +46,7 @@ void print(const string& msg_prefix, ERROR_CODE err_code, const string& msg_suff
     cout << endl;
 }
 
-void parseArgs(int argc, char *argv[], InitParameters &param, string& file_name) {
+void parseArgs(int argc, char *argv[], Configuration& appConfig) {
     time_t tt;
     struct tm* ti;
     time(&tt);
@@ -70,35 +70,35 @@ void parseArgs(int argc, char *argv[], InitParameters &param, string& file_name)
         } else if ((arg == "-f") || (arg == "--framerate")) {
             frameRateStr = argv[i + 1];
         } else if ((arg == "-o") || (arg == "--output")) {
-            file_name = argv[i + 1];
+            appConfig.fileName = argv[i + 1];
         } else {
             cout << "Unknown option: <" << argv[i] << endl;
         }
     }
 
-    getResFrameRate(resStr, frameRateStr, param);
+    getResFrameRate(resStr, frameRateStr, appConfig.initParameters);
 }
 
-void getResFrameRate(const string& resStr, const string& frameStr, InitParameters& param) {
+void getResFrameRate(const string& resStr, const string& frameStr, sl::InitParameters& param) {
     int frameRate = stoi(frameStr, nullptr, 10);
     if (resStr == "WVGA" || resStr == "VGA") {
-        param.camera_resolution = RESOLUTION::VGA;
+        param.camera_resolution = sl::RESOLUTION::VGA;
         param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
     } else if (resStr == "HD" || resStr == "720P") {
-        param.camera_resolution = RESOLUTION::HD720;
+        param.camera_resolution = sl::RESOLUTION::HD720;
         param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
     } else if (resStr =="FULLHD" || resStr == "1080P") {
-        param.camera_resolution = RESOLUTION::HD1080;
+        param.camera_resolution = sl::RESOLUTION::HD1080;
         param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
     } else if (resStr == "ULTRAHD" || resStr == "4K") {
-        param.camera_resolution = RESOLUTION::HD2K;
+        param.camera_resolution = sl::RESOLUTION::HD2K;
         param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
     }
 }
 
-int getValidFrameRate(RESOLUTION resolution, int rate) {
+int getValidFrameRate(sl::RESOLUTION resolution, int rate) {
     switch (resolution) {
-        case RESOLUTION::VGA:
+        case sl::RESOLUTION::VGA:
             // acceptable framerates 15, 30, 60, 100
             if (rate == 15) {
                 return 15;
@@ -109,7 +109,7 @@ int getValidFrameRate(RESOLUTION resolution, int rate) {
             } else {
                 return 100;
             }
-        case RESOLUTION::HD720:
+        case sl::RESOLUTION::HD720:
             // acceptable framerates 15, 30, 60
             if (rate == 15) {
                 return 15;
@@ -118,17 +118,17 @@ int getValidFrameRate(RESOLUTION resolution, int rate) {
             } else {
                 return 60;
             }
-        case RESOLUTION::HD1080:
+        case sl::RESOLUTION::HD1080:
             // acceptable framerates 15, 30
             if (rate == 15) {
                 return 15;
             } else {
                 return 30;
             }
-        case RESOLUTION::HD2K:
+        case sl::RESOLUTION::HD2K:
             // acceptable framerate 15
             return 15;
-        case RESOLUTION::LAST:
+        case sl::RESOLUTION::LAST:
             break;
     }
 }
