@@ -2,36 +2,80 @@
 // Created by sherlock on 12/05/2021.
 //
 
-#include "zed_record.h"
 #include <ctime>
 #include <sl/Camera.hpp>
+#include <utils.hpp>
 
 
 using namespace std;
 
 struct Configuration {
-    sl::InitParameters initParameters;
+    sl::InitParameters init;
     int frameRate{};
     string fileName{};
 };
 
 void showUsage();
-void print(const string& msg_prefix, sl::ERROR_CODE err_code = sl::ERROR_CODE::SUCCESS, const string& msg_suffix = "");
-void parseArgs(int argc, char *argv[], Configuration& config);
-void getResFrameRate(const string& resStr, const string& frameStr, sl::InitParameters& param);
+
+void print(const string &msg_prefix, sl::ERROR_CODE err_code = sl::ERROR_CODE::SUCCESS, const string &msg_suffix = "");
+
+void parseArgs(int argc, char *argv[], Configuration &config);
+
 int getValidFrameRate(sl::RESOLUTION resolution, int rate);
+
+int record(const Configuration &appConfig);
 
 int main(int argc, char *argv[]) {
     Configuration config;
     parseArgs(argc, argv, config);
+
+    // verify arguments?
+
+    return record(config);
 }
 
-void record(const Configuration& appConfig) {
+int record(const Configuration &appConfig) {
     sl::Camera zed;
 
+    auto returnedState = zed.open(appConfig.init);
+
+    if (returnedState != sl::ERROR_CODE::SUCCESS) {
+        print("Camera Open Failed", returnedState, "Exit Program.");
+        return EXIT_FAILURE;
+    }
+
+    returnedState = zed.enableRecording(sl::RecordingParameters(appConfig.fileName.c_str()));
+
+    if (returnedState != sl::ERROR_CODE::SUCCESS) {
+        print("Recording ZED failed", returnedState, "Exiting Program");
+        zed.close();
+        return EXIT_FAILURE;
+    }
+
+    printf("SVO is recording, use CTRL+C to stop.\n");
+    SetCtrlHandler();
+    int framesRecorded = 0, framesFailed = 0;
+    sl::RecordingStatus recStatus;
+
+    while (!exit_app) {
+        if (zed.grab() == sl::ERROR_CODE::SUCCESS) {
+            recStatus = zed.getRecordingStatus();
+            if (recStatus.status) {
+                framesRecorded++;
+            } else {
+                framesFailed++;
+            }
+            ProgressUpdater(framesRecorded, framesFailed);
+        }
+    }
+
+    zed.disableRecording();
+    zed.close();
+    return EXIT_SUCCESS;
 }
 
-void print(const string& msg_prefix, sl::ERROR_CODE err_code, const string& msg_suffix) {
+void print(const string &msg_prefix, sl::ERROR_CODE err_code, const string &msg_suffix) {
+    cout << "[Sample]";
     if (err_code != sl::ERROR_CODE::SUCCESS)
         cout << "[Error] ";
     else
@@ -46,14 +90,14 @@ void print(const string& msg_prefix, sl::ERROR_CODE err_code, const string& msg_
     cout << endl;
 }
 
-void parseArgs(int argc, char *argv[], Configuration& appConfig) {
+void parseArgs(int argc, char *argv[], Configuration &appConfig) {
     time_t tt;
-    struct tm* ti;
+    struct tm *ti;
     time(&tt);
-    ti = localtime_s(&tt);
+    ti = localtime(&tt);
 
     if (argc == 1) {
-        cout << "Using default values of WVGA@100fps with the filename being " << asctime_s(ti) << ".svo" << endl;
+        cout << "Using default values of WVGA@100fps with the filename being " << asctime(ti) << ".svo" << endl;
     }
 
     string frameRateStr;
@@ -76,23 +120,19 @@ void parseArgs(int argc, char *argv[], Configuration& appConfig) {
         }
     }
 
-    getResFrameRate(resStr, frameRateStr, appConfig.initParameters);
-}
-
-void getResFrameRate(const string& resStr, const string& frameStr, sl::InitParameters& param) {
-    int frameRate = stoi(frameStr, nullptr, 10);
+    int frameRate = stoi(frameRateStr, nullptr, 10);
     if (resStr == "WVGA" || resStr == "VGA") {
-        param.camera_resolution = sl::RESOLUTION::VGA;
-        param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
+        appConfig.init.camera_resolution = sl::RESOLUTION::VGA;
+        appConfig.init.camera_fps = getValidFrameRate(appConfig.init.camera_resolution, frameRate);
     } else if (resStr == "HD" || resStr == "720P") {
-        param.camera_resolution = sl::RESOLUTION::HD720;
-        param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
-    } else if (resStr =="FULLHD" || resStr == "1080P") {
-        param.camera_resolution = sl::RESOLUTION::HD1080;
-        param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
+        appConfig.init.camera_resolution = sl::RESOLUTION::HD720;
+        appConfig.init.camera_fps = getValidFrameRate(appConfig.init.camera_resolution, frameRate);
+    } else if (resStr == "FULLHD" || resStr == "1080P") {
+        appConfig.init.camera_resolution = sl::RESOLUTION::HD1080;
+        appConfig.init.camera_fps = getValidFrameRate(appConfig.init.camera_resolution, frameRate);
     } else if (resStr == "ULTRAHD" || resStr == "4K") {
-        param.camera_resolution = sl::RESOLUTION::HD2K;
-        param.camera_fps = getValidFrameRate(param.camera_resolution, frameRate);
+        appConfig.init.camera_resolution = sl::RESOLUTION::HD2K;
+        appConfig.init.camera_fps = getValidFrameRate(appConfig.init.camera_resolution, frameRate);
     }
 }
 
@@ -133,7 +173,7 @@ int getValidFrameRate(sl::RESOLUTION resolution, int rate) {
     }
 }
 
-void showUsage () {
+void showUsage() {
     cout << "./zed_record -r <resolution> -f <frameRate> -o <output_name>" << endl;
     cout << "-r or --resolution\t: Define the resolution of the recording. Accepted values: WVGA, HD, FULLHD, 4K" << endl;
     cout << "-f or --framerate\t: Define the framerate of the recording. Limited by the resolution. Accepted values are 15, 30, 60, 100" << endl;

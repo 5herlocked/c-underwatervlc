@@ -18,7 +18,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 link_directories(${ZED_LIBRARY_DIR})
 link_directories(${CUDA_LIBRARY_DIRS})
 
-add_executable(${PROJECT_NAME} src/zed_record.cpp)
+add_executable(${PROJECT_NAME} include/utils.hpp src/zed_record.cpp)
 
 if (LINK_SHARED_ZED)
     set(ZED_LIBS ${ZED_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${CUDA_CUDART_LIBRARY} ${CUDA_NPP_LIBRARIES_ZED})
