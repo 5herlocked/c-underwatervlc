@@ -98,6 +98,8 @@ void parseArgs(int argc, char *argv[], Configuration &appConfig) {
 
     if (argc == 1) {
         cout << "Using default values of WVGA@100fps with the filename being " << asctime(ti) << ".svo" << endl;
+
+        appConfig.fileName = asctime(ti);
     }
 
     string frameRateStr;
@@ -121,16 +123,16 @@ void parseArgs(int argc, char *argv[], Configuration &appConfig) {
     }
 
     int frameRate = stoi(frameRateStr, nullptr, 10);
-    if (resStr == "WVGA" || resStr == "VGA") {
+    if (resStr == "WVGA" || resStr == "wvga") {
         appConfig.init.camera_resolution = sl::RESOLUTION::VGA;
         appConfig.init.camera_fps = getValidFrameRate(appConfig.init.camera_resolution, frameRate);
-    } else if (resStr == "HD" || resStr == "720P") {
+    } else if (resStr == "HD" || resStr == "hd") {
         appConfig.init.camera_resolution = sl::RESOLUTION::HD720;
         appConfig.init.camera_fps = getValidFrameRate(appConfig.init.camera_resolution, frameRate);
-    } else if (resStr == "FULLHD" || resStr == "1080P") {
+    } else if (resStr == "FULLHD" || resStr == "fullhd") {
         appConfig.init.camera_resolution = sl::RESOLUTION::HD1080;
         appConfig.init.camera_fps = getValidFrameRate(appConfig.init.camera_resolution, frameRate);
-    } else if (resStr == "ULTRAHD" || resStr == "4K") {
+    } else if (resStr == "ULTRAHD" || resStr == "ultrahd") {
         appConfig.init.camera_resolution = sl::RESOLUTION::HD2K;
         appConfig.init.camera_fps = getValidFrameRate(appConfig.init.camera_resolution, frameRate);
     }
