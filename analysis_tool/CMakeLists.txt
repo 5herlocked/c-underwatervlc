@@ -17,6 +17,3 @@ link_directories(${OpenCV_LIBRARY_DIRS})
 add_executable(${PROJECT_NAME} include/utils.h src/analysis_tool.cpp)
 
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBRARIES})
-if (NOT WIN32)
-    target_link_libraries(${PROJECT_NAME} stdc++fs)
-endif()
