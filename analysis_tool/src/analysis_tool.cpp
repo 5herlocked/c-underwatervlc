@@ -386,8 +386,13 @@ void createCSV(const vector<LogEntry> &logs, const string &filename) {
 
     // frameAverage is of type double[4], we need to destructure it
     for (const LogEntry &entry : logs) {
-        csvStream << entry.deltaTime << "," << entry.frameAverage.val[0] << "," << entry.frameAverage.val[1] << ","
-                  << entry.frameAverage.val[2] << "," << entry.deducedBit.value() << "\n";
+        if (entry.deducedBit.has_value()) {
+            csvStream << entry.deltaTime << "," << entry.frameAverage.val[0] << "," << entry.frameAverage.val[1] << ","
+                      << entry.frameAverage.val[2] << "," << entry.deducedBit.value() << "\n";
+        } else {
+            csvStream << entry.deltaTime << "," << entry.frameAverage.val[0] << "," << entry.frameAverage.val[1] << ","
+                      << entry.frameAverage.val[2] << ", N/A" << "\n";
+        }
     }
 
     csvStream.close();
