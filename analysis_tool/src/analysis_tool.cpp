@@ -81,7 +81,13 @@ int main(int argc, char *argv[]) {
         case SINGLE_VIDEO:
             // make sure vid exists then send it off to be processed in the proper manner
             if (fs::is_regular_file(config.location.value().c_str(), fs_error)) {
-                analyseVideo(config);
+                auto file = fs::path(config.location.value());
+                optional<std::string> output_val = replaceExtension(file);
+
+                auto generatedData = analyseVideo(config);
+                if (generatedData.has_value()) {
+                    createCSV(generatedData.value(), output_val.value());
+                }
                 return 0;
             } else {
                 // The file does not exist
@@ -390,7 +396,7 @@ void createCSV(const vector<LogEntry> &logs, const string &filename) {
 
 void showUsage() {
     // TODO: Fill out help section
-    cout << "./analysis_tool -d -f <file_path> -d <folder_path> -o <output_name>" << endl;
+    cout << "./analysis_tool -s -f <file_path> -d <folder_path> -o <output_name>" << endl;
     cout << "-s or --dataset\t: Sets the dataset flag and stipulates that the included folder path contains a full "
             "dataset that can be analysed contextually" << endl;
     cout << "-f or --file\t: File path of the avi file you want to analyse" << endl;
