@@ -186,7 +186,7 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
         return {};
     }
 
-    cv::namedWindow("source vid", cv::WINDOW_AUTOSIZE);
+    cv::namedWindow("source vid", cv::WINDOW_FREERATIO);
     cv::imshow("source vid", frame);
 
     cv::Rect roi = cv::selectROI("source vid", frame, true, false);
