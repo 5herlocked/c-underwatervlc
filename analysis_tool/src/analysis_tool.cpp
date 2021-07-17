@@ -327,6 +327,7 @@ optional<std::string> replaceExtension(const fs::path &path) {
 }
 
 void analyseDataset(Configuration &configuration, const fs::path &ledON, const fs::path &ledOFF) {
+    // setup internal variables
     auto tempConfig = configuration;
     vector<cv::Scalar> scalarEntries = vector<cv::Scalar>();
     auto getScalar = [&scalarEntries] (const LogEntry& l) { scalarEntries.push_back(l.frameAverage); };
@@ -335,6 +336,7 @@ void analyseDataset(Configuration &configuration, const fs::path &ledON, const f
     tempConfig.location = ledON.string();
     tempConfig.genericOutput = replaceExtension(ledON);
     auto scalarAverages = analyseVideo(tempConfig);
+    // extract scalar averages from the logs
     for_each(scalarAverages.value().cbegin(), scalarAverages.value().cend(), getScalar);
     auto ledONAverage = getScalarAverage(scalarEntries);
 
@@ -344,6 +346,7 @@ void analyseDataset(Configuration &configuration, const fs::path &ledON, const f
     tempConfig.location = ledOFF.string();
     tempConfig.genericOutput = replaceExtension(ledOFF);
     scalarAverages = analyseVideo(tempConfig);
+    // extract the scalar averages from the logs
     for_each(scalarAverages.value().cbegin(), scalarAverages.value().cend(), getScalar);
     auto ledOFFAverage = getScalarAverage(scalarEntries);
 
