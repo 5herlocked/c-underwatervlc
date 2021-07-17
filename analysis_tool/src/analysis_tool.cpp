@@ -12,6 +12,7 @@
 #if __has_include(<filesystem>)
 
 #include <filesystem>
+
 namespace fs = std::filesystem;
 
 #elif __has_include(<experimental/filesystem>)
@@ -33,6 +34,11 @@ enum SOURCE_TYPE {
 enum APP_TYPE {
     RAW_ANALYSIS,
     DATASET_ANALYSIS
+};
+
+struct MouseData {
+    int location{};
+    cv::Point points[4];
 };
 
 struct LogEntry {
@@ -63,11 +69,11 @@ void createCSV(const vector<LogEntry> &logs, const string &filename);
 
 void showUsage();
 
-cv::Scalar getScalarAverage(const optional<vector<LogEntry>> &logs);
+cv::Scalar getScalarAverage(const vector<cv::Scalar> &scalars);
 
 optional<std::string> replaceExtension(const fs::path &path);
 
-cv::Scalar getAverage(const cv::Scalar &val1, const cv::Scalar &val2);
+void capturePointsCallback(int event, int x, int y, int flags, void *userdata);
 
 int main(int argc, char *argv[]) {
     Configuration config{};
@@ -172,6 +178,8 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
     cv::VideoCapture video(config.location.value());
     auto frameMeans = vector<LogEntry>();
 
+    MouseData roiBox;
+
     if (!video.isOpened()) {
         cout << "Cannot open the video file" << endl;
         exit(-1);
@@ -189,9 +197,24 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
     cv::namedWindow("source vid", cv::WINDOW_FREERATIO);
     cv::imshow("source vid", frame);
 
-    cv::Rect roi = cv::selectROI("source vid", frame, true, false);
+    cv::setMouseCallback("source vid", capturePointsCallback, static_cast<void *>(&roiBox));
 
-    cv::Mat roiMask(frame, roi);
+    char k = 0;
+
+    while (k != ' ') {
+        cv::Mat tempMat = frame;
+        for (const cv::Point &p : roiBox.points) {
+            cv::drawMarker(tempMat, p, cv::Scalar({0, 15, 255, 255}));
+        }
+        cv::imshow("source vid", tempMat);
+
+        // checks if user has pressed key
+        k = cv::waitKey(0);
+    }
+
+    auto roi = cv::minAreaRect(vector<cv::Point>(begin(roiBox.points), end(roiBox.points)));
+
+    cv::Mat roiMask(frame, roi.boundingRect());
 
     cv::imshow("roi vid", roiMask);
 
@@ -199,6 +222,8 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
     double totalFrames = video.get(cv::CAP_PROP_FRAME_COUNT);
 
     int position = 0;
+
+    cv::destroyAllWindows();
 
     while (true) {
         readSuccess = video.read(frame);
@@ -212,10 +237,8 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
         position += 1;
 
         // This should be the ROI mat
-        roiMask = frame(roi);
+        roiMask = frame(roi.boundingRect());
 
-        // TODO: Make a vec of scalars that stores our values, then log them
-        // This average will be more blue when the LED is on, and less blue when the LED is off
         cv::Scalar average = cv::mean(roiMask);
         double deltaTime = position / fps;
         optional<int> deducedBit = nullopt;
@@ -226,7 +249,7 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
             // find diff between ledON and ledOFF
             // split the diff to get threshold?
             // deducedBit = average > threshold ? 1 : average < threshold ? 0 : nullopt;
-            auto threshold = getAverage(ledONVal.value(), ledOFFVal.value());
+            auto threshold = getScalarAverage({ ledONVal.value(), ledOFFVal.value() });
 
             // Refer only to the B of the BRG values
             if (average[0] > threshold[0]) {
@@ -238,7 +261,6 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
             }
         }
 
-        // TODO: threshold to find the bit value
         frameMeans.push_back(LogEntry{
                 deltaTime,
                 average,
@@ -250,16 +272,6 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
     video.release();
 
     return frameMeans;
-}
-
-cv::Scalar getAverage(const cv::Scalar &val1, const cv::Scalar &val2) {
-    cv::Scalar returnVal = cv::Scalar();
-
-    returnVal[0] = (val1[0] + val2[0])/2;
-    returnVal[1] = (val1[1] + val2[1])/2;
-    returnVal[2] = (val1[2] + val2[2])/2;
-
-    return returnVal;
 }
 
 // Pre-conditions: command line options are valid, the folder exists.
@@ -316,20 +328,30 @@ optional<std::string> replaceExtension(const fs::path &path) {
 
 void analyseDataset(Configuration &configuration, const fs::path &ledON, const fs::path &ledOFF) {
     auto tempConfig = configuration;
+    vector<cv::Scalar> scalarEntries = vector<cv::Scalar>();
+    auto getScalar = [&scalarEntries] (const LogEntry& l) { scalarEntries.push_back(l.frameAverage); };
 
     // Sets up temporary configuration files
     tempConfig.location = ledON.string();
     tempConfig.genericOutput = replaceExtension(ledON);
-    auto ledONAverage = getScalarAverage(analyseVideo(tempConfig));
+    auto scalarAverages = analyseVideo(tempConfig);
+    for_each(scalarAverages.value().cbegin(), scalarAverages.value().cend(), getScalar);
+    auto ledONAverage = getScalarAverage(scalarEntries);
+
+    // empty scalar entries
+    scalarEntries.clear();
 
     tempConfig.location = ledOFF.string();
     tempConfig.genericOutput = replaceExtension(ledOFF);
-    auto ledOFFAverage = getScalarAverage(analyseVideo(tempConfig));
+    scalarAverages = analyseVideo(tempConfig);
+    for_each(scalarAverages.value().cbegin(), scalarAverages.value().cend(), getScalar);
+    auto ledOFFAverage = getScalarAverage(scalarEntries);
 
     // iterate through the rest of the directory
     for (const auto &file : fs::directory_iterator(configuration.location.value().c_str())) {
         // Ignore the ON, OFF files
-        if (file.path().filename().string().find("on") != string::npos || file.path().filename().string().find("off") != string::npos) {
+        if (file.path().filename().string().find("on") != string::npos ||
+            file.path().filename().string().find("off") != string::npos) {
             continue;
         } else if (file.path().extension() == ".avi") {
             optional<std::string> temp = file.path().string();
@@ -357,25 +379,21 @@ void analyseDataset(Configuration &configuration, const fs::path &ledON, const f
  * Else returns [mB, mR, mG, 255]
  * The final channel is A (alpha) which is not used in our videos or analysis
  */
-cv::Scalar getScalarAverage(const optional<vector<LogEntry>> &logs) {
-    if (logs.has_value()) {
-        int t = 1;
-        double blueAverage = 0;
-        double redAverage = 0;
-        double greenAverage = 0;
+cv::Scalar getScalarAverage(const vector<cv::Scalar> &scalars) {
+    int t = 1;
+    double blueAverage = 0;
+    double redAverage = 0;
+    double greenAverage = 0;
 
-        for (LogEntry l : logs.value()) {
-            blueAverage += (l.frameAverage[0] - blueAverage) / t;
-            redAverage += (l.frameAverage[1] - redAverage) / t;
-            greenAverage += (l.frameAverage[2] - greenAverage) / t;
+    for (cv::Scalar l : scalars) {
+        blueAverage += (l[0] - blueAverage) / t;
+        redAverage += (l[1] - redAverage) / t;
+        greenAverage += (l[2] - greenAverage) / t;
 
-            ++t;
-        }
-
-        return cv::Scalar(blueAverage, redAverage, greenAverage, 255);
+        ++t;
     }
 
-    return cv::Scalar::all(0);
+    return cv::Scalar(blueAverage, redAverage, greenAverage, 255);
 }
 
 void createCSV(const vector<LogEntry> &logs, const string &filename) {
@@ -398,6 +416,15 @@ void createCSV(const vector<LogEntry> &logs, const string &filename) {
     csvStream.close();
 }
 
+
+void capturePointsCallback(int event, int x, int y, int flags, void *userdata) {
+    auto *data = static_cast<MouseData *>(userdata);
+
+    if (event == cv::EVENT_LBUTTONDOWN && data->location < 4) {
+        data->points[data->location] = cv::Point(x, y);
+        data->location += 1;
+    }
+}
 
 void showUsage() {
     // TODO: Fill out help section
