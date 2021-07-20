@@ -67,7 +67,10 @@ struct LogEntry {
 // function definitions
 void parseArgs(int argc, char **argv, Configuration &config);
 
-void instantiateGPIO(gpiod_chip *chip, gpiod_line *pin);
+// These accept a reference to a pointer
+void instantiateGPIO(gpiod_chip *&chip, gpiod_line *&pin);
+
+void gpioCleanUp(gpiod_chip *&pChip, gpiod_line *&pLine);
 
 void setState(const Configuration &config);
 
@@ -91,8 +94,6 @@ optional<GPIO> toGPIO(const string &input);
 [[maybe_unused]] Configuration getTestConfiguration();
 
 [[maybe_unused]] vector<int> generateBitFlips(int size);
-
-void gpioCleanUp(gpiod_chip *pChip, gpiod_line *pLine);
 
 // Runner
 int main(int argc, char *argv[]) {
@@ -183,7 +184,7 @@ void parseArgs(int argc, char **argv, Configuration &config) {
     }
 }
 
-void instantiateGPIO(gpiod_chip *chip, gpiod_line *pin) {
+void instantiateGPIO(gpiod_chip *&chip, gpiod_line *&pin) {
     chip = gpiod_chip_open_by_number(0);
 
     if (!chip) {
@@ -203,28 +204,40 @@ void instantiateGPIO(gpiod_chip *chip, gpiod_line *pin) {
     }
 }
 
+void gpioCleanUp(gpiod_chip *&pChip, gpiod_line *&pLine) {
+    gpiod_line_release(pLine);
+    gpiod_chip_close(pChip);
+}
+
 // Sets the GPIO state to either ON or OFF
 void setState(const Configuration &config) {
+    sigset_t set;
     struct gpiod_chip *chip = nullptr;
     struct gpiod_line *pin = nullptr;
 
     instantiateGPIO(chip, pin);
 
     int pinRequest = gpiod_line_request_output(pin, "transmitter_out", config.state.value());
-    if (!pinRequest) {
+    if (pinRequest) {
         // If pin request failed
         printf("Pin request failed\n");
     }
 
     int stateRequest = gpiod_line_set_value(pin, config.state.value());
 
-    if (!stateRequest) {
+    if (stateRequest) {
         // If set State Failed
         printf("Set state request failed\n");
     }
 
     cout << "Holding state to " << config.state.value() << endl;
     cout << "Press Ctrl + C to exit and reset the GPIO pin" << endl;
+
+    sigemptyset(&set);
+
+    if (sigwait(&set, reinterpret_cast<int *>(SIGINT)) == SIGINT) {
+        gpioCleanUp(chip, pin);
+    }
 }
 
 /*
@@ -286,8 +299,7 @@ optional<vector<LogEntry>> transmit(const Configuration &config, const vector<in
     gpiod_line_set_value(pin, 0);
 
     // Clean Up
-    gpiod_line_release(pin);
-    gpiod_chip_close(chip);
+    gpioCleanUp(chip, pin);
 
     return logs;
 }
