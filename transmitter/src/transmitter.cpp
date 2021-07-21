@@ -16,6 +16,7 @@
 #include <cmath>
 #include <csignal>
 #include <fstream>
+#include <sstream>
 
 #include "getopt.h"
 #include "gpiod.h"
@@ -34,6 +35,7 @@ using namespace std;
 enum APP_TYPE {
     STATE,
     RANDOM,
+    TEST,
     // TODO: Just add elements in here as the app gets more complicated
 };
 
@@ -107,9 +109,12 @@ int main(int argc, char *argv[]) {
             case RANDOM:
                 // Do logs
                 logs = transmit(appConfig, generateRandomTransmission(appConfig.bits.value()));
+                break;
             case STATE:
                 setState(appConfig);
-                return 0;
+                break;
+            case TEST:
+                logs = transmit(appConfig, generateBitFlips(appConfig.bits.value()));
                 break;
         }
     } else {
@@ -118,9 +123,11 @@ int main(int argc, char *argv[]) {
         showUsage();
     }
 
-    if (logs.has_value()) {
+    if (logs.has_value() && appConfig.type.value() != APP_TYPE::TEST) {
         // Logs successfully generated
         generateCSV(logs.value(), appConfig);
+    } else if (appConfig.type.value() == APP_TYPE::TEST) {
+        printf("Test Complete\n");
     } else {
         // Logs failed to generate
         printf("Logs did not generate\n");
@@ -141,10 +148,11 @@ void parseArgs(int argc, char **argv, Configuration &config) {
             {"frequency", required_argument, nullptr, 'f'},
             {"cycles",    required_argument, nullptr, 'c'},
             {"output",    optional_argument, nullptr, 'o'},
+            {"test",      no_argument,       nullptr, 't'},
             {nullptr,     no_argument,       nullptr, 0}
     };
     int optionIdx = 0;
-    while ((opt = getopt_long(argc, argv, "hs:r:f:c:", long_options, &optionIdx)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hs:r:f:c:t", long_options, &optionIdx)) != -1) {
         switch (opt) {
             case 0:
                 //TODO: No arguments, default config
@@ -171,11 +179,14 @@ void parseArgs(int argc, char **argv, Configuration &config) {
             case 'f':
                 config.frequency = getFrequency(strtol(optarg, nullptr, 10));
                 break;
-            case 't':
+            case 'c':
                 config.cycles = strtol(optarg, nullptr, 10);
                 break;
             case 'o':
                 config.output = optarg;
+                break;
+            case 't':
+                config = getTestConfiguration();
                 break;
             default:
                 printf("Unknown option %s with argument %s", long_options[opt].name, optarg);
@@ -341,13 +352,25 @@ void preciseSleep(double seconds) {
 
 void generateCSV(const vector<LogEntry> &logs, const Configuration& config) {
     fstream csvStream;
-    csvStream.open(config.output.value() + ".csv", ios::out);
+    if (config.output.has_value()) {
+        csvStream.open(config.output.value() + ".csv", ios::out);
+    } else {
+        ostringstream csvName;
+        csvName << "transmitter_" << config.bits.value() << "bits_" << (1/config.frequency.value()) << "hz_" << config.cycles.value() << "cycles" << ".csv";
+
+        csvStream.open(csvName.str(), ios::out);
+    }
 
     csvStream << "deltaTime" << "," << "bit" << "," << "message" << "\n";
 
     // frameAverage is of type double[4], we need to destructure it
     for (const LogEntry &entry : logs) {
-        csvStream << entry.deltaTime->count() << "," << entry.transmittedBit.value() << "," << entry.message.value() << "\n";
+        csvStream << entry.deltaTime->count() << "," << entry.transmittedBit.value();
+        if (entry.message.has_value()) {
+             csvStream << "," << entry.message.value() << "\n";
+        } else {
+            csvStream << "\n";
+        }
     }
 
     csvStream.close();
@@ -399,7 +422,7 @@ optional<GPIO> toGPIO(const string &input) {
     Configuration testConfig{};
 
     testConfig.type = APP_TYPE::RANDOM;
-    testConfig.frequency = getFrequency(30'000);
+    testConfig.frequency = getFrequency(25'000);
     testConfig.bits = 100'000;
     testConfig.cycles = 1;
 
