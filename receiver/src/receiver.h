@@ -1,39 +1,53 @@
 //
-// Created by sherlock on 12/05/2021.
+// Created by camv7 on 21/07/2021.
 //
+#include <string>
+#include <optional>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <chrono>
 
-#pragma once
+#include "serialib.h"
 
-static bool exit_app = false;
+#ifndef RECEIVER_RECEIVER_H
+#define RECEIVER_RECEIVER_H
 
-// Handle the CTRL-C keyboard signal
-#ifdef _WIN32
-#include <Windows.h>
+using namespace std;
 
-void CtrlHandler(DWORD fdwCtrlType) {
-    exit_app = (fdwCtrlType == CTRL_C_EVENT);
-}
-#else
-#include <csignal>
-void nix_exit_handler(int s) {
-    exit_app = true;
-}
-#endif
+struct Configuration {
+    // This should be separated into private variables and public accessor methods but
+    // I am becoming a little lazy
+    string arduinoSource{};
+    double pollingRate{};
+    optional<string> output{};
+};
 
-// Set the function to handle the CTRL-C
-void SetCtrlHandler() {
-#ifdef _WIN32
-    SetConsoleCtrlHandler((PHANDLER_ROUTINE) CtrlHandler, TRUE);
-#else // unix
-    struct sigaction sigIntHandler{};
-    sigIntHandler.sa_handler = nix_exit_handler;
-    sigemptyset(&sigIntHandler.sa_mask);
-    sigIntHandler.sa_flags = 0;
-    sigaction(SIGINT, &sigIntHandler, nullptr);
-#endif
-}
+struct LogEntry {
+    chrono::duration<double> deltaTime{};
+    float deducedVoltage{};
+    int analogValue{};
+};
 
-#ifndef C_UNDERWATERVLC_RECEIVER_H
-#define C_UNDERWATERVLC_RECEIVER_H
+enum PosArg {
+    NO_ARG,
+    OPT_ARG,
+    REQ_ARG,
+};
 
-#endif //C_UNDERWATERVLC_RECEIVER_H
+struct CLOption {
+    string shortOpt{};
+    string longOpt{};
+    string description{};
+    PosArg arguments{};
+};
+
+void parseArgs(int argc, char *argv[], Configuration &config);
+
+void writeLogs(const std::vector<LogEntry> &logs, const Configuration &config);
+
+int serialErrorHandler(int serialErr, const Configuration &appConfig);
+
+void showUsage();
+
+#endif //RECEIVER_RECEIVER_H
