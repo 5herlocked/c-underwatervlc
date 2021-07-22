@@ -2,7 +2,6 @@
 
 int analogPin = A0;
 int val = 0;
-unsigned long prev_time;
 
 unsigned long wait_duration;
 
@@ -39,6 +38,10 @@ void recvPollingRate() {
         }
     }
 
+    // 1/Hz is the amount of seconds it needs to sleep
+    // * 10,000 to get milliseconds to sleep
+    // The Microcontroller MAXES out at 10kSPS
+    // This means at MAX the sleep time will be 100 milliseconds
     pollingRate = (1.0/strtol(receivedChars, nullptr, 10)) * 10'000;
 }
 
