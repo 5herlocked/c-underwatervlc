@@ -7,95 +7,10 @@
  * It only relies on system libraries available on an nVidia Jetson Nano Developer Kit
  */
 
-#include <cstdlib>
-#include <chrono>
-#include <thread>
-#include <optional>
-#include <iostream>
-#include <vector>
-#include <cmath>
-#include <csignal>
-#include <fstream>
-#include <sstream>
-
 #include "getopt.h"
 #include "gpiod.h"
 #include "utils.h"
-
-// Change this to move the gpio pin
-// reference: https://www.jetsonhacks.com/nvidia-jetson-nano-2gb-j6-gpio-header-pinout/
-// use the sysfs GPIO name but only the number
-// confirm that the line being used is correct by running the command
-// sudo gpiofind "<name_of_pin>"
-#define OUT 79
-
-using namespace std;
-
-// Define enums for standardisation
-enum APP_TYPE {
-    STATE,
-    RANDOM,
-    TEST,
-    // TODO: Just add elements in here as the app gets more complicated
-};
-
-// Explicitly stating their internal values
-// Though implicitly they mean the same thing
-// GPIO::OFF will be interpreted as 0 when directly referenced.
-enum GPIO {
-    OFF = 0,
-    ON = 1,
-};
-
-
-// Main data holding struct to manage the entire configuration of the application
-// Realistically there will only be one that'll be created
-// but easier to just declare as a full struct
-struct Configuration {
-    optional<APP_TYPE> type{};
-    optional<GPIO> state{};
-    optional<int> bits{};
-    optional<double> frequency{};
-    optional<int> cycles{};
-    optional<string> output{};
-};
-
-struct LogEntry {
-    optional<chrono::duration<double>> deltaTime{};
-    optional<int> transmittedBit{};
-    optional<string> message{};
-};
-
-// function definitions
-void parseArgs(int argc, char **argv, Configuration &config);
-
-// These accept a reference to a pointer
-void instantiateGPIO(gpiod_chip *&chip, gpiod_line *&pin);
-
-void gpioCleanUp(gpiod_chip *&pChip, gpiod_line *&pLine);
-
-void setState(const Configuration &config);
-
-optional<vector<LogEntry>> transmit(const Configuration &config, const vector<int> &transmission);
-
-void preciseSleep(double seconds);
-
-void generateCSV(const vector<LogEntry>& logs, const Configuration &appConfig);
-
-void showUsage();
-
-void signalHandler(int signal);
-
-optional<double> getFrequency(long frequency);
-
-vector<int> generateRandomTransmission(const int &value);
-
-optional<GPIO> toGPIO(const string &input);
-
-// Test functions
-[[maybe_unused]] Configuration getTestConfiguration();
-
-[[maybe_unused]] vector<int> generateBitFlips(int size);
+#include "transmitter.h"
 
 // Runner
 int main(int argc, char *argv[]) {
@@ -257,7 +172,6 @@ void setState(const Configuration &config) {
  * Reference
  */
 optional<vector<LogEntry>> transmit(const Configuration &config, const vector<int> &transmission) {
-    auto currentEntry = LogEntry{};
     auto logs = vector<LogEntry>();
 
     struct gpiod_chip *chip = nullptr;
@@ -267,14 +181,14 @@ optional<vector<LogEntry>> transmit(const Configuration &config, const vector<in
 
     gpiod_line_request_output(pin, "transmitter_out", 0);
 
-    double frequency = config.frequency.value();
-    auto length = transmission.size() * config.cycles.value();
+    const double frequency = config.frequency.value();
+    const auto length = transmission.size() * config.cycles.value();
     int transmitted = 0, failed = 0;
-    auto t_0 = chrono::high_resolution_clock::now();
-    auto prevClock = chrono::high_resolution_clock::now();
+    const auto t_0 = chrono::high_resolution_clock::now();
 
     for (int count = 0; count < config.cycles; ++count) {
         for (int i : transmission) {
+            auto currentEntry = LogEntry{};
             auto nextClock = chrono::high_resolution_clock::now();
 
             int complete = gpiod_line_set_value(pin, i);

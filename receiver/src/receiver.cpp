@@ -2,6 +2,7 @@
 // Created by sherlock on 12/05/2021.
 //
 #include "receiver.h"
+#include "utils.h"
 
 const vector<CLOption> PROGRAM_OPTIONS = {
         CLOption{
@@ -28,12 +29,27 @@ int main(int argc, char* argv[]) {
     Configuration appConfig{};
     parseArgs(argc, argv, appConfig);
 
+    // Setup the signal handler
+    SetCtrlHandler();
+
     auto serialDevice = serialib();
     char serialErr = serialDevice.openDevice(appConfig.arduinoSource.c_str(), 115200);
+
+    optional<vector<LogEntry>> logs;
+
     if (serialErr == 1) {
         // Serial device successfully opened
+        serialDevice.flushReceiver();
+        serialDevice.writeString((to_string(appConfig.pollingRate) + "\n").c_str());
+        logs = readSerialPort(serialDevice, appConfig);
     } else {
         return serialErrorHandler(serialErr, appConfig);
+    }
+
+    if (logs.has_value()) {
+        writeLogs(logs.value(), appConfig);
+    } else {
+        printf("Logs not generated\n");
     }
 
     // Successfully returns
@@ -49,13 +65,25 @@ void parseArgs(int argc, char **argv, Configuration &config) {
             exit(0);
         } else if ((arg == "-s") || (arg == "--source")) {
             // SERIAL PORT LOCATION
+            config.arduinoSource = argv[++i];
         } else if ((arg == "-o") || (arg == "--output")) {
             // OUTPUT LOCATION
+            config.output = argv[++i];
         } else {
             printf("Unknown Option %s\n", arg.c_str());
             return;
         }
     }
+}
+
+vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &config) {
+    auto logs = vector<LogEntry>();
+
+    while (!exit_app) {
+
+    }
+
+    return logs;
 }
 
 void writeLogs(const std::vector<LogEntry> &logs, const Configuration &config) {

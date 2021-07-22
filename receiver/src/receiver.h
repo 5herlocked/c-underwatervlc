@@ -46,6 +46,8 @@ void parseArgs(int argc, char *argv[], Configuration &config);
 
 void writeLogs(const std::vector<LogEntry> &logs, const Configuration &config);
 
+vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &config);
+
 int serialErrorHandler(int serialErr, const Configuration &appConfig);
 
 void showUsage();

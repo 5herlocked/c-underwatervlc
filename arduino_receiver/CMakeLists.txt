@@ -30,7 +30,7 @@ set(${PROJECT_NAME}_SKETCH arduino_receiver.ino)
 
 #### Additional settings for programmer. From programmers.txt
 set(${PROJECT_NAME}_PROGRAMMER avrispmkii)
-set(${PROJECT_NAME}_PORT COM8)
+set(${PROJECT_NAME}_PORT COM9)
 # set(nano.upload.speed 9600)
 
 ## Verbose build process
