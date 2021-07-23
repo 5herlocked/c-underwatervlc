@@ -39,7 +39,8 @@ int main(int argc, char* argv[]) {
 
     if (serialErr == 1) {
         // Serial device successfully opened
-        serialDevice.flushReceiver();
+        serialDevice.writeString("?");
+
         serialDevice.writeString((to_string(appConfig.pollingRate) + "\n").c_str());
         logs = readSerialPort(serialDevice, appConfig);
     } else {
