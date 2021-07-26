@@ -4,6 +4,8 @@
 #include "receiver.h"
 #include "utils.h"
 
+const char SERIAL_END_CHAR = '\n';
+
 const vector<CLOption> PROGRAM_OPTIONS = {
         CLOption{
             "-h",
@@ -37,12 +39,19 @@ int main(int argc, char* argv[]) {
 
     optional<vector<LogEntry>> logs;
 
+    char *serialInputBuffer;
+
     if (serialErr == 1) {
         // Serial device successfully opened
         serialDevice.writeString("?");
 
-        serialDevice.writeString((to_string(appConfig.pollingRate) + "\n").c_str());
-        logs = readSerialPort(serialDevice, appConfig);
+        if (serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0) {
+            // WE HAVE A RESPONSE FROM THE ARDUINO
+            serialDevice.writeString((to_string(appConfig.pollingRate) + "\n").c_str());
+            logs = readSerialPort(serialDevice, appConfig);
+        } else {
+            // Response is invalid OR buffer is full
+        }
     } else {
         return serialErrorHandler(serialErr, appConfig);
     }
