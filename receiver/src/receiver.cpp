@@ -5,9 +5,10 @@
 #include "utils.h"
 
 // Modify these constant globals to change internals
-const char SERIAL_END_CHAR = '\n';
-const int ADC_RESOLUTION = 1023;
-const double ADC_VOLTAGE = 5.00;
+constexpr char SERIAL_END_CHAR = '\n';
+constexpr int ADC_RESOLUTION = 1023;
+constexpr double ADC_VOLTAGE = 5.00;
+const string ADC_READY_STRING = "Ready";
 
 const vector<CLOption> PROGRAM_OPTIONS = {
         CLOption{
@@ -51,7 +52,8 @@ int main(int argc, char *argv[]) {
         // Sleeps for 2 seconds to make sure the arduino has time to respond
         preciseSleep(2);
 
-        if (serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0) {
+        if (serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0
+                && string(serialInputBuffer) == ADC_READY_STRING) {
             // WE HAVE A RESPONSE FROM THE ARDUINO
             serialDevice.writeString((to_string(appConfig.pollingRate) + "\n").c_str());
             logs = readSerialPort(serialDevice, appConfig);
