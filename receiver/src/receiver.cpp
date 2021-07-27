@@ -4,6 +4,7 @@
 #include "receiver.h"
 #include "utils.h"
 
+// Modify these constant globals to change internals
 const char SERIAL_END_CHAR = '\n';
 const int ADC_RESOLUTION = 1023;
 const double ADC_VOLTAGE = 5.00;
@@ -47,12 +48,16 @@ int main(int argc, char *argv[]) {
         // Serial device successfully opened
         serialDevice.writeString("?");
 
+        // Sleeps for 2 seconds to make sure the arduino has time to respond
+        preciseSleep(2);
+
         if (serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0) {
             // WE HAVE A RESPONSE FROM THE ARDUINO
             serialDevice.writeString((to_string(appConfig.pollingRate) + "\n").c_str());
             logs = readSerialPort(serialDevice, appConfig);
         } else {
-            // Response is invalid OR buffer is full
+            // Response is invalid
+
         }
     } else {
         return serialErrorHandler(serialErr, appConfig);
@@ -89,25 +94,31 @@ void parseArgs(int argc, char **argv, Configuration &config) {
 }
 
 vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &config) {
+    using namespace chrono;
+
     auto logs = vector<LogEntry>();
 
     char *serialInputBuffer;
 
-    const auto startTime = chrono::high_resolution_clock::now();
+    const auto startTime = high_resolution_clock::now();
     while (!exit_app) {
-        auto startClock = chrono::high_resolution_clock::now();
+        auto startClock = high_resolution_clock::now();
         if (serialPort.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0) {
             int analogValue = strtol(serialInputBuffer, nullptr, 10);
             logs.push_back(
                     LogEntry{
-                        chrono::high_resolution_clock::now() - startTime,
+                        high_resolution_clock::now() - startTime,
                         getVoltage(analogValue),
                         analogValue,
                         });
         }
-        auto recordClock = chrono::high_resolution_clock::now();
+        auto recordClock = high_resolution_clock::now();
 
         double sleepTime = config.pollingRate - ((recordClock - startClock).count() / 1e9);
+        if (sleepTime <= 0) {
+            // Negative Sleep
+            continue;
+        }
         // Sleep for half the requested polling rate
         // So we're still checking more often than the values are likely to come in
         preciseSleep(sleepTime/2);
@@ -130,7 +141,7 @@ double getVoltage(int analogVoltage) {
  * Borrowed from: https://blat-blatnik.github.io/computerBear/making-accurate-sleep-function/
  */
 void preciseSleep(double seconds) {
-    using namespace std::chrono;
+    using namespace chrono;
 
     static double estimate = 5e-3;
     static double mean = 5e-3;
@@ -208,5 +219,15 @@ int serialErrorHandler(int serialErr, const Configuration &appConfig) {
 }
 
 void showUsage() {
+    ostringstream helpBuilder;
+    helpBuilder << "./receiver ";
+    for (const CLOption& opt : PROGRAM_OPTIONS) {
+        helpBuilder << opt.shortOpt << " ";
+    }
+    helpBuilder << endl;
+    for (const CLOption& opt : PROGRAM_OPTIONS) {
+        helpBuilder << opt.shortOpt << "or" << opt.longOpt << "\t: " << opt.description << endl;
+    }
 
+    printf("%s", helpBuilder.str().c_str());
 }
