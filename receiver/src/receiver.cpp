@@ -5,29 +5,31 @@
 #include "utils.h"
 
 const char SERIAL_END_CHAR = '\n';
+const int ADC_RESOLUTION = 1023;
+const double ADC_VOLTAGE = 5.00;
 
 const vector<CLOption> PROGRAM_OPTIONS = {
         CLOption{
-            "-h",
-            "--help",
-            "Prints the help menu",
-            PosArg::NO_ARG,
+                "-h",
+                "--help",
+                "Prints the help menu",
+                PosArg::NO_ARG,
         },
         CLOption{
-            "-s",
-            "--source",
-            "Define the source of serial communication from the Arduino",
-            PosArg::REQ_ARG,
+                "-s",
+                "--source",
+                "Define the source of serial communication from the Arduino",
+                PosArg::REQ_ARG,
         },
         CLOption{
-            "-o",
-            "--output",
-            "Define the file name of the receiver data",
-            PosArg::OPT_ARG,
+                "-o",
+                "--output",
+                "Define the file name of the receiver data",
+                PosArg::OPT_ARG,
         }
 };
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     Configuration appConfig{};
     parseArgs(argc, argv, appConfig);
 
@@ -89,11 +91,71 @@ void parseArgs(int argc, char **argv, Configuration &config) {
 vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &config) {
     auto logs = vector<LogEntry>();
 
-    while (!exit_app) {
+    char *serialInputBuffer;
 
+    const auto startTime = chrono::high_resolution_clock::now();
+    while (!exit_app) {
+        auto startClock = chrono::high_resolution_clock::now();
+        if (serialPort.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0) {
+            int analogValue = strtol(serialInputBuffer, nullptr, 10);
+            logs.push_back(
+                    LogEntry{
+                        chrono::high_resolution_clock::now() - startTime,
+                        getVoltage(analogValue),
+                        analogValue,
+                        });
+        }
+        auto recordClock = chrono::high_resolution_clock::now();
+
+        double sleepTime = config.pollingRate - ((recordClock - startClock).count() / 1e9);
+        // Sleep for half the requested polling rate
+        // So we're still checking more often than the values are likely to come in
+        preciseSleep(sleepTime/2);
     }
 
     return logs;
+}
+
+/*
+ * (ADC Reading * System Voltage)/ADC Resolution = Voltage Value
+ */
+double getVoltage(int analogVoltage) {
+    return (analogVoltage * ADC_VOLTAGE)/ADC_RESOLUTION;
+}
+
+/*
+ * Uses a combination of thread_sleep (longer time intervals)
+ * and spinlock to get as accurate of a sleep time as we can get without overloading the CPU
+ * Assumes thread::sleep_for() has very poor accuracy and compensates for it
+ * Borrowed from: https://blat-blatnik.github.io/computerBear/making-accurate-sleep-function/
+ */
+void preciseSleep(double seconds) {
+    using namespace std::chrono;
+
+    static double estimate = 5e-3;
+    static double mean = 5e-3;
+    static double m2 = 0;
+    static int64_t count = 1;
+
+    while (seconds > estimate) {
+        auto start = high_resolution_clock::now();
+        this_thread::sleep_for(milliseconds(1));
+        auto end = high_resolution_clock::now();
+
+        double observed = (end - start).count() / 1e9;
+        seconds -= observed;
+
+        ++count;
+        double delta = observed - mean;
+        mean += delta / count;
+        m2   += delta * (observed - mean);
+        double stddev = sqrt(m2 / (count - 1));
+        estimate = mean + stddev;
+    }
+
+    // spin lock
+    auto start = high_resolution_clock::now();
+    while ((high_resolution_clock::now() - start).count() / 1e9 < seconds);
 }
 
 void writeLogs(const std::vector<LogEntry> &logs, const Configuration &config) {

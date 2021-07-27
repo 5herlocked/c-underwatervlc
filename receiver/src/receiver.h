@@ -4,6 +4,7 @@
 #include <string>
 #include <optional>
 #include <vector>
+#include <thread>
 #include <fstream>
 #include <sstream>
 #include <chrono>
@@ -25,7 +26,7 @@ struct Configuration {
 
 struct LogEntry {
     chrono::duration<double> deltaTime{};
-    float deducedVoltage{};
+    double deducedVoltage{};
     int analogValue{};
 };
 
@@ -47,6 +48,10 @@ void parseArgs(int argc, char *argv[], Configuration &config);
 void writeLogs(const std::vector<LogEntry> &logs, const Configuration &config);
 
 vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &config);
+
+double getVoltage(int analogVoltage);
+
+void preciseSleep(double seconds);
 
 int serialErrorHandler(int serialErr, const Configuration &appConfig);
 
