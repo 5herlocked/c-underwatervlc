@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
                 setState(appConfig);
                 break;
             case TEST:
+                appConfig = getTestConfiguration();
                 logs = transmit(appConfig, generateBitFlips(appConfig.bits.value()));
                 break;
         }
