@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
     // Get BER value
     double berValue = getBer(config, transmitterCSV, receiverCSV);
 
-    printf("BER Value: %.2lf%%\n", berValue);
+    printf("BER Value: %.2lf%%\n", 100 - berValue);
 }
 
 void parseArgs(int argc, char **argv, Configuration &config) {

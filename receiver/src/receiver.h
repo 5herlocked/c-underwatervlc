@@ -57,4 +57,8 @@ int serialErrorHandler(int serialErr, const Configuration &appConfig);
 
 void showUsage();
 
+double getFrequency(long frequency);
+
+Configuration getTestConfig();
+
 #endif //RECEIVER_RECEIVER_H

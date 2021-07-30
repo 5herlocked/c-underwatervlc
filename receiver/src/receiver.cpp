@@ -4,6 +4,9 @@
 #include "receiver.h"
 #include "utils.h"
 
+// The COM ports on windows are referenced with \\\\.\\COM<x>
+// On windows to /dev/tty<x>
+
 // Modify these constant globals to change internals
 constexpr char SERIAL_END_CHAR = '\n';
 constexpr int ADC_RESOLUTION = 1023;
@@ -23,11 +26,23 @@ const vector<CLOption> PROGRAM_OPTIONS = {
                 "Define the source of serial communication from the Arduino",
                 PosArg::REQ_ARG,
         },
+        CLOption {
+            "-f",
+            "--frequency",
+            "Define the frequency of the arduino's polling rate",
+            PosArg::REQ_ARG,
+        },
         CLOption{
                 "-o",
                 "--output",
                 "Define the file name of the receiver data",
                 PosArg::OPT_ARG,
+        },
+        CLOption{
+            "-t",
+            "--test",
+            "Starts the testing suite",
+            PosArg::NO_ARG,
         }
 };
 
@@ -88,19 +103,25 @@ void parseArgs(int argc, char **argv, Configuration &config) {
         } else if ((arg == "-o") || (arg == "--output")) {
             // OUTPUT LOCATION
             config.output = argv[++i];
+        } else if ((arg == "-f") || (arg == "--frequency")){
+            // Polling Rate
+            config.pollingRate = getFrequency(strtol(arg.c_str(), nullptr, 10));
+        } else if ((arg == "-t") || (arg == "--test")) {
+            // Test instance
+            config = getTestConfig();
         } else {
-            printf("Unknown Option %s\n", arg.c_str());
-            return;
+                printf("Unknown Option %s\n", arg.c_str());
+                return;
+            }
         }
     }
-}
 
 vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &config) {
     using namespace chrono;
 
     auto logs = vector<LogEntry>();
 
-    char *serialInputBuffer;
+    char *serialInputBuffer = new char[32];
 
     const auto startTime = high_resolution_clock::now();
     while (!exit_app) {
@@ -232,4 +253,18 @@ void showUsage() {
     }
 
     printf("%s", helpBuilder.str().c_str());
+}
+
+Configuration getTestConfig() {
+    Configuration testConfig{};
+
+    testConfig.arduinoSource = R"(\\.\COM3)";
+    testConfig.pollingRate = 10'000;
+    testConfig.output = "testReceiver";
+
+    return testConfig;
+}
+
+double getFrequency(long frequency) {
+    return (1.0/frequency);
 }
