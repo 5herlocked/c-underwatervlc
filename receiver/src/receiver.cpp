@@ -5,13 +5,14 @@
 #include "utils.h"
 
 // The COM ports on windows are referenced with \\\\.\\COM<x>
-// On windows to /dev/tty<x>
+// On linux as /dev/tty<x>
 
 // Modify these constant globals to change internals
 constexpr char SERIAL_END_CHAR = '\n';
 constexpr int ADC_RESOLUTION = 1023;
 constexpr double ADC_VOLTAGE = 5.00;
 const string ADC_READY_STRING = "Ready";
+const string ADC_CONNECTED_STRING = "Connected";
 
 const vector<CLOption> PROGRAM_OPTIONS = {
         CLOption{
@@ -53,25 +54,32 @@ int main(int argc, char *argv[]) {
     // Setup the signal handler
     SetCtrlHandler();
 
-    auto serialDevice = serialib();
-    char serialErr = serialDevice.openDevice(appConfig.arduinoSource.c_str(), 115200);
+    serialib serialDevice;
+    int serialErr = serialDevice.openDevice(appConfig.arduinoSource.c_str(), 115200);
 
     optional<vector<LogEntry>> logs;
 
-    char *serialInputBuffer;
+    char *serialInputBuffer = new char[32];
 
     if (serialErr == 1) {
-        // Serial device successfully opened
-        serialDevice.writeString("?");
-
         // Sleeps for 2 seconds to make sure the arduino has time to respond
         preciseSleep(2);
 
         if (serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0
-                && string(serialInputBuffer) == ADC_READY_STRING) {
+            && string(serialInputBuffer).find(ADC_READY_STRING) != string::npos) {
             // WE HAVE A RESPONSE FROM THE ARDUINO
-            serialDevice.writeString((to_string(appConfig.pollingRate) + "\n").c_str());
-            logs = readSerialPort(serialDevice, appConfig);
+            // Serial device successfully opened
+            serialDevice.writeString("?");
+
+            serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32);
+
+            if (string(serialInputBuffer).find(ADC_CONNECTED_STRING) != string::npos) {
+                serialDevice.writeString((to_string(1/appConfig.pollingRate) + "\n").c_str());
+                serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32);
+                logs = readSerialPort(serialDevice, appConfig);
+            } else {
+                // Weird response from the arduino
+            }
         } else {
             // Response is invalid
 
@@ -105,7 +113,7 @@ void parseArgs(int argc, char **argv, Configuration &config) {
             config.output = argv[++i];
         } else if ((arg == "-f") || (arg == "--frequency")){
             // Polling Rate
-            config.pollingRate = getFrequency(strtol(arg.c_str(), nullptr, 10));
+            config.pollingRate = strtol(argv[++i], nullptr, 10);
         } else if ((arg == "-t") || (arg == "--test")) {
             // Test instance
             config = getTestConfig();
@@ -118,6 +126,8 @@ void parseArgs(int argc, char **argv, Configuration &config) {
 
 vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &config) {
     using namespace chrono;
+
+    auto pollTime = getFrequency(config.pollingRate);
 
     auto logs = vector<LogEntry>();
 
@@ -137,7 +147,7 @@ vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &confi
         }
         auto recordClock = high_resolution_clock::now();
 
-        double sleepTime = config.pollingRate - ((recordClock - startClock).count() / 1e9);
+        double sleepTime = pollTime - ((recordClock - startClock).count() / 1e9);
         if (sleepTime <= 0) {
             // Negative Sleep
             continue;
@@ -146,6 +156,8 @@ vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &confi
         // So we're still checking more often than the values are likely to come in
         preciseSleep(sleepTime/2);
     }
+
+    serialPort.writeString("!");
 
     return logs;
 }
@@ -249,7 +261,7 @@ void showUsage() {
     }
     helpBuilder << endl;
     for (const CLOption& opt : PROGRAM_OPTIONS) {
-        helpBuilder << opt.shortOpt << "or" << opt.longOpt << "\t: " << opt.description << endl;
+        helpBuilder << opt.shortOpt << " or " << opt.longOpt << "\t: " << opt.description << endl;
     }
 
     printf("%s", helpBuilder.str().c_str());
@@ -258,7 +270,7 @@ void showUsage() {
 Configuration getTestConfig() {
     Configuration testConfig{};
 
-    testConfig.arduinoSource = R"(\\.\COM3)";
+    testConfig.arduinoSource = R"(/dev/ttyUSB0)";
     testConfig.pollingRate = 10'000;
     testConfig.output = "testReceiver";
 

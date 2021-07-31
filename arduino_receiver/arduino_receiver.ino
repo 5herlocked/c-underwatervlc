@@ -35,23 +35,23 @@ void recvPollingRate() {
     }
 }
 
-void recvConnectPacket() {
-    char connectMarker = '?';
+bool readPacket(char value) {
     char rc;
-
     if (Serial.available() > 0) {
         rc = Serial.read();
-
-        if (rc == connectMarker) {
-            connected = true;
-        }
         Serial.readString();
+
+        if (rc == value) {
+            return true;
+        }
     }
+
+    return false;
 }
 
 void loop() {
     if (!connected) {
-        recvConnectPacket();
+        connected = readPacket('?');
         if (connected) {
             Serial.println("Connected");
         }
@@ -64,6 +64,11 @@ void loop() {
             Serial.println("Polling Rate Acquired");
             Serial.println(pollingRate);
         }
+        return;
+    }
+
+    if (connected) {
+        connected = !readPacket('!');
         return;
     }
 

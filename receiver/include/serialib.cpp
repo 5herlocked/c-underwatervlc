@@ -95,7 +95,7 @@ serialib::~serialib()
      \return -5 error while writing port parameters
      \return -6 error while writing timeout parameters
   */
-char serialib::openDevice(const char *Device,const unsigned int Bauds)
+int serialib::openDevice(const char *Device,const unsigned int Bauds)
 {
 #if defined (_WIN32) || defined( _WIN64)
     // Open serial port
@@ -244,7 +244,7 @@ void serialib::closeDevice()
      \return 1 success
      \return -1 error while writting data
   */
-char serialib::writeChar(const char Byte)
+int serialib::writeChar(const char Byte)
 {
 #if defined (_WIN32) || defined( _WIN64)
     // Number of bytes written
@@ -276,7 +276,7 @@ char serialib::writeChar(const char Byte)
      \return     1 success
      \return    -1 error while writting data
   */
-char serialib::writeString(const char *receivedString)
+int serialib::writeString(const char *receivedString)
 {
 #if defined (_WIN32) || defined( _WIN64)
     // Number of bytes written
@@ -342,7 +342,7 @@ char serialib::writeBytes(const void *Buffer, const unsigned int NbBytes)
      \return -1 error while setting the Timeout
      \return -2 error while reading the byte
   */
-char serialib::readChar(char *pByte,unsigned int timeOut_ms)
+int serialib::readChar(char *pByte,unsigned int timeOut_ms)
 {
 #if defined (_WIN32) || defined(_WIN64)
     // Number of bytes read
@@ -584,7 +584,7 @@ int serialib::readBytes (void *buffer,unsigned int maxNbBytes,unsigned int timeO
     \return If the function succeeds, the return value is nonzero.
             If the function fails, the return value is zero.
 */
-char serialib::flushReceiver()
+int serialib::flushReceiver()
 {
 #if defined (_WIN32) || defined(_WIN64)
     // Purge receiver

@@ -73,7 +73,7 @@ public:
 
 
     // Open a device
-    char    openDevice (const char *Device,const unsigned int Bauds);
+    int openDevice (const char *Device,const unsigned int Bauds);
 
     // Close the current device
     void    closeDevice();
@@ -86,10 +86,10 @@ public:
 
 
     // Write a char
-    char    writeChar   (char);
+    int writeChar   (char);
 
     // Read a char (with timeout)
-    char    readChar    (char *pByte,const unsigned int timeOut_ms=0);
+    int readChar    (char *pByte,const unsigned int timeOut_ms=0);
 
 
 
@@ -99,7 +99,7 @@ public:
 
 
     // Write a string
-    char    writeString (const char *String);
+    int writeString (const char *String);
 
     // Read a string (with timeout)
     int     readString  (   char *receivedString,
@@ -127,7 +127,7 @@ public:
 
 
     // Empty the received buffer
-    char    flushReceiver();
+    int flushReceiver();
 
     // Return the number of bytes in the received buffer
     int     available();
