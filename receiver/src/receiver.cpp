@@ -136,7 +136,8 @@ vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &confi
     const auto startTime = high_resolution_clock::now();
     while (!exit_app) {
         auto startClock = high_resolution_clock::now();
-        if (serialPort.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0) {
+        if (serialPort.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0
+                && isdigit(serialInputBuffer[0])) {
             int analogValue = strtol(serialInputBuffer, nullptr, 10);
             logs.push_back(
                     LogEntry{
