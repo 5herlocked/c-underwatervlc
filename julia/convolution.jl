@@ -52,7 +52,7 @@ md"""### Preprosessing the Data"""
 md"""Number of tracking bits: $(@bind precision NumberField(3:20; default=5))"""
 
 # ╔═╡ 76b61b23-97f8-4ceb-a18e-2c2a7396a7d5
-md"""Ratio of Transmitter to Receiver: $(@bind ratio NumberField(2:100))"""
+md"""Ratio of Transmitter to Receiver: $(@bind ratio NumberField(2:100; default=4))"""
 
 # ╔═╡ 3cb738b5-f4c3-46a8-abeb-321dd3faebf3
 function getVectorFromFile(file::CSV.File)::Vector{Int16}
@@ -103,7 +103,10 @@ end
 receiverString = getReceiverString(receiverVector)
 
 # ╔═╡ 47e2d884-24e4-4081-ba49-7fead3f430d4
-transmissionStart = findfirst(transmissionPattern, receiverString).start
+transmissionRange = findfirst(transmissionPattern, receiverString)
+
+# ╔═╡ 9b7ca4a3-9f14-470a-a5a6-d64890762a11
+transmissionStart = transmissionRange == nothing ? -1 : transmissionRange.start
 
 # ╔═╡ aa3e160f-bf62-4ce7-be8a-c5dbba127927
 md"### Using a Gaussian Kernel"
@@ -1138,6 +1141,7 @@ version = "0.9.1+5"
 # ╟─ab21165f-3e1f-4d49-b4b8-aa39786951cc
 # ╠═bc4f5957-48cc-41eb-8c8d-e0e25ad19637
 # ╠═47e2d884-24e4-4081-ba49-7fead3f430d4
+# ╠═9b7ca4a3-9f14-470a-a5a6-d64890762a11
 # ╟─3cb738b5-f4c3-46a8-abeb-321dd3faebf3
 # ╟─1188f8b9-e645-4b4b-8b8d-23538120e35d
 # ╟─2bfa4263-3b0b-4849-b453-a39f2545a88c
