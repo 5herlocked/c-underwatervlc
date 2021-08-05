@@ -32,3 +32,8 @@ void SetCtrlHandler() {
     sigaction(SIGINT, &sigIntHandler, nullptr);
 #endif
 }
+
+void progressBar(int completed) {
+    std::cout << "Points Captured: " << completed;
+    std::cout << "\r" << std::flush;
+}

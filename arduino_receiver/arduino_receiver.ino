@@ -50,27 +50,27 @@ bool readPacket(char value) {
 }
 
 void loop() {
-    if (!connected) {
-        connected = readPacket('?');
-        if (connected) {
-            Serial.println("Connected");
-        }
-        return;
-    }
-
-    if (!newData) {
-        recvPollingRate();
-        if (newData) {
-            Serial.println("Polling Rate Acquired");
-            Serial.println(pollingRate);
-        }
-        return;
-    }
-
-    if (connected) {
-        connected = !readPacket('!');
-        return;
-    }
+//    if (!connected) {
+//        connected = readPacket('?');
+//        if (connected) {
+//            Serial.println("Connected");
+//        }
+//        return;
+//    }
+//
+//    if (!newData) {
+//        recvPollingRate();
+//        if (newData) {
+//            Serial.println("Polling Rate Acquired");
+//            Serial.println(pollingRate);
+//        }
+//        return;
+//    }
+//
+//    if (connected) {
+//        connected = !readPacket('!');
+//        return;
+//    }
 
     auto next_clock = micros();
 
