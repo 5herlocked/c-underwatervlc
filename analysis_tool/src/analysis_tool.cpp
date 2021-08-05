@@ -265,24 +265,27 @@ void analyseDataset(Configuration &configuration, const fs::path &ledON, const f
     for_each(scalarAverages.value().cbegin(), scalarAverages.value().cend(), getScalar);
     auto ledOFFAverage = getScalarAverage(scalarEntries);
 
-    // iterate through the rest of the directory
-    for (const auto &file : fs::directory_iterator(configuration.location.value().c_str())) {
-        // Ignore the ON, OFF files
-        if (file.path().filename().string().find("on") != string::npos ||
-            file.path().filename().string().find("off") != string::npos) {
-            continue;
-        } else if (file.path().extension() == ".avi") {
-            optional<std::string> temp = file.path().string();
-            optional<std::string> output_val = replaceExtension(file.path());
-            tempConfig.location = temp;
-            tempConfig.genericOutput = output_val;
+    printf("LED On RED: %.2lf\t BLUE: %.2lf\t GREEN: %.2lf\n", ledONAverage[2], ledONAverage[0], ledONAverage[1]);
+    printf("LED Off RED: %.2lf\t BLUE: %.2lf\t GREEN: %.2lf\n", ledOFFAverage[2], ledOFFAverage[0], ledOFFAverage[1]);
 
-            auto generatedData = analyseVideo(tempConfig, ledONAverage, ledOFFAverage);
-            if (generatedData.has_value()) {
-                createCSV(generatedData.value(), tempConfig.genericOutput.value());
-            }
-        }
-    }
+    // iterate through the rest of the directory
+//    for (const auto &file : fs::directory_iterator(configuration.location.value().c_str())) {
+//        // Ignore the ON, OFF files
+//        if (file.path().filename().string().find("on") != string::npos ||
+//            file.path().filename().string().find("off") != string::npos) {
+//            continue;
+//        } else if (file.path().extension() == ".avi") {
+//            optional<std::string> temp = file.path().string();
+//            optional<std::string> output_val = replaceExtension(file.path());
+//            tempConfig.location = temp;
+//            tempConfig.genericOutput = output_val;
+//
+//            auto generatedData = analyseVideo(tempConfig, ledONAverage, ledOFFAverage);
+//            if (generatedData.has_value()) {
+//                createCSV(generatedData.value(), tempConfig.genericOutput.value());
+//            }
+//        }
+//    }
 }
 
 /*
