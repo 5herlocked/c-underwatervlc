@@ -232,7 +232,7 @@ int exportVideo(Configuration &config) {
                 ostringstream filename1;
                 filename1 << config.genericOutput.value() << setfill('0') << setw(6) << svoPos << ".png";
                 ostringstream filename2;
-                filename2 << config.genericOutput.value() << "_depth" << setw(6) << svoPos << ".png";
+                filename2 << config.genericOutput.value() << "_depth" << setfill('0') << setw(6) << svoPos << ".png";
 
                 cv::imwrite(filename1.str(), imageSideByside);
                 cv::Mat depth16;
