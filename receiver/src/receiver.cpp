@@ -65,21 +65,10 @@ int main(int argc, char *argv[]) {
         // Sleeps for 2 seconds to make sure the arduino has time to respond
         preciseSleep(2);
 
-        if (serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0
-            && string(serialInputBuffer).find(ADC_READY_STRING) != string::npos) {
+        if (serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0) {
             // WE HAVE A RESPONSE FROM THE ARDUINO
             // Serial device successfully opened
-            serialDevice.writeString("?");
-
-            serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32);
-
-            if (string(serialInputBuffer).find(ADC_CONNECTED_STRING) != string::npos) {
-                serialDevice.writeString((to_string(1/appConfig.pollingRate) + "\n").c_str());
-                serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32);
-                logs = readSerialPort(serialDevice, appConfig);
-            } else {
-                // Weird response from the arduino
-            }
+            logs = readSerialPort(serialDevice, appConfig);
         } else {
             // Response is invalid
 
@@ -89,6 +78,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (logs.has_value()) {
+        printf("Log size: %zu\n", logs->size());
         writeLogs(logs.value(), appConfig);
     } else {
         printf("Logs not generated\n");
@@ -136,8 +126,7 @@ vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &confi
     const auto startTime = high_resolution_clock::now();
     while (!exit_app) {
         auto startClock = high_resolution_clock::now();
-        if (serialPort.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0
-                && isdigit(serialInputBuffer[0])) {
+        if (serialPort.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0) {
             int analogValue = strtol(serialInputBuffer, nullptr, 10);
             logs.push_back(
                     LogEntry{
@@ -146,8 +135,8 @@ vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &confi
                         analogValue,
                         });
         }
+        progressBar(logs.size());
         auto recordClock = high_resolution_clock::now();
-
         double sleepTime = pollTime - ((recordClock - startClock).count() / 1e9);
         if (sleepTime <= 0) {
             // Negative Sleep
@@ -157,8 +146,7 @@ vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &confi
         // So we're still checking more often than the values are likely to come in
         preciseSleep(sleepTime/2);
     }
-
-    serialPort.writeString("!");
+    const auto endTime = high_resolution_clock::now();
 
     return logs;
 }

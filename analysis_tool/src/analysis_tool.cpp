@@ -127,24 +127,9 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
     cv::namedWindow("source vid", cv::WINDOW_FREERATIO);
     cv::imshow("source vid", frame);
 
-    cv::setMouseCallback("source vid", capturePointsCallback, static_cast<void *>(&roiBox));
+    auto roi = cv::selectROI("source vid", frame, true, false);
 
-    char k = 0;
-
-    while (k != ' ') {
-        cv::Mat tempMat = frame;
-        for (const cv::Point &p : roiBox.points) {
-            cv::drawMarker(tempMat, p, cv::Scalar({0, 15, 255, 255}));
-        }
-        cv::imshow("source vid", tempMat);
-
-        // checks if user has pressed key
-        k = cv::waitKey(0);
-    }
-
-    auto roi = cv::minAreaRect(vector<cv::Point>(begin(roiBox.points), end(roiBox.points)));
-
-    cv::Mat roiMask(frame, roi.boundingRect());
+    cv::Mat roiMask(frame, roi);
 
     cv::imshow("roi vid", roiMask);
 
@@ -167,7 +152,7 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
         position += 1;
 
         // This should be the ROI mat
-        roiMask = frame(roi.boundingRect());
+        roiMask = frame(roi);
 
         cv::Scalar average = cv::mean(roiMask);
         double deltaTime = position / fps;
