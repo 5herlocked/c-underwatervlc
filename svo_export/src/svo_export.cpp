@@ -131,7 +131,7 @@ void parseArgs(int argc, char* argv[], Configuration& app_config) {
             if (!app_config.source.has_value()) {
                 // If the source hasn't already been declared
                 app_config.source = SOURCE_TYPE::SINGLE_VIDEO;
-                std::filesystem::path file_path = argv[++i];
+                filesystem::path file_path = argv[++i];
                 app_config.location = file_path.string();
                 app_config.genericOutput = file_path.replace_extension().string();
             } else {
@@ -161,7 +161,7 @@ int exportVideo(Configuration &config) {
     init.input.setFromSVOFile(config.location.value().c_str());
     init.coordinate_system = COORDINATE_SYSTEM::RIGHT_HANDED_Y_UP;
     init.coordinate_units = UNIT::MILLIMETER;
-    init.depth_mode = DEPTH_MODE::ULTRA;
+    init.depth_mode = DEPTH_MODE::QUALITY;
 
     zed.open(init);
 
@@ -192,8 +192,12 @@ int exportVideo(Configuration &config) {
         return EXIT_FAILURE;
     }
 
+    if (config.type.value() == APP_TYPE::COMPLETE_DECOMPOSITION) {
+        fs::create_directory(config.genericOutput.value());
+    }
+
     RuntimeParameters param;
-    param.sensing_mode = SENSING_MODE::FILL;
+    param.sensing_mode = SENSING_MODE::STANDARD;
 
     // Start SVO conversion to AVI/SEQUENCE
     print("Converting SVO... Use Ctrl-C to interrupt conversion.");
@@ -205,7 +209,7 @@ int exportVideo(Configuration &config) {
 
     SetCtrlHandler();
 
-    while(true) {
+    while(!exit_app) {
         sl::ERROR_CODE err = zed.grab(param);
         // The SVO grab was successful
         if (err == ERROR_CODE::SUCCESS) {
@@ -232,7 +236,7 @@ int exportVideo(Configuration &config) {
                 ostringstream filename1;
                 filename1 << config.genericOutput.value() << setfill('0') << setw(6) << svoPos << ".png";
                 ostringstream filename2;
-                filename2 << config.genericOutput.value() << "_depth" << setw(6) << svoPos << ".png";
+                filename2 << config.genericOutput.value() << "_depth" << setfill('0') << setw(6) << svoPos << ".png";
 
                 cv::imwrite(filename1.str(), imageSideByside);
                 cv::Mat depth16;
