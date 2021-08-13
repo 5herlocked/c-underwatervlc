@@ -5,6 +5,8 @@
 #ifndef TRANSMITTER_TRANSMITTER_H
 #define TRANSMITTER_TRANSMITTER_H
 
+#pragma once
+
 #include <cstdlib>
 #include <chrono>
 #include <thread>

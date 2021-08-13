@@ -19,6 +19,9 @@ begin
 	using CSV
 end
 
+# ╔═╡ 40e2df25-4309-4d8f-94d9-1f19f08decee
+md"# Block-By-Block Checking"
+
 # ╔═╡ e4796ed5-3edc-4e13-855f-ce98f9507b00
 md"Imports"
 
@@ -29,13 +32,13 @@ md"## Initial Setup"
 md"""Ratio of Transmitter to Receiver: $(@bind ratio NumberField(2:100; default=4))"""
 
 # ╔═╡ 7ca8cc67-7da5-4a97-a2e2-ebb1314a999a
-md"""Size of window: $(@bind window_size NumberField(1:35000; default=0))"""
+md"""Size of window: $(@bind window_size NumberField(1:ratio; default=0))"""
 
 # ╔═╡ 82368edb-f787-4e74-9c42-baca1198b800
-md"""### Analysing block by block"""
+md"## Analysing block by block"
 
 # ╔═╡ 9deb7f76-be16-4030-92bc-b7c6cde58fc1
-md"### Summary"
+md"## Summary"
 
 # ╔═╡ 2131a8a4-b0c0-49e5-ac7f-0e9977e39366
 md"""
@@ -262,22 +265,23 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 """
 
 # ╔═╡ Cell order:
+# ╟─40e2df25-4309-4d8f-94d9-1f19f08decee
 # ╟─e4796ed5-3edc-4e13-855f-ce98f9507b00
 # ╠═72def700-f655-11eb-3347-0f460332501c
 # ╟─43a2f15e-0f74-417f-9457-e285610a2a64
 # ╠═c210e2e6-d985-4177-b516-82a158aaf505
-# ╟─3da9ea6a-d89b-49a6-83cc-132a376a0f00
-# ╟─83219521-6ee7-40b5-abd5-057ca98491fa
-# ╠═3709c25a-d5f6-470d-9d76-f6019dda570c
-# ╟─7ca8cc67-7da5-4a97-a2e2-ebb1314a999a
-# ╟─344f30b1-efae-4286-8d95-665d65a0d6cb
+# ╠═3da9ea6a-d89b-49a6-83cc-132a376a0f00
+# ╠═83219521-6ee7-40b5-abd5-057ca98491fa
+# ╟─3709c25a-d5f6-470d-9d76-f6019dda570c
+# ╠═7ca8cc67-7da5-4a97-a2e2-ebb1314a999a
+# ╠═344f30b1-efae-4286-8d95-665d65a0d6cb
 # ╟─82368edb-f787-4e74-9c42-baca1198b800
 # ╠═f602abe8-db66-46c0-b5d4-42faa2b872aa
 # ╠═cd9c5c29-407c-4349-a1d5-45616936bfcf
 # ╠═59a7d05b-e988-4ff2-93d5-8155e92bb2b9
 # ╠═0f3ef489-767c-425d-870d-15c0a06ab3c0
 # ╟─9deb7f76-be16-4030-92bc-b7c6cde58fc1
-# ╠═2131a8a4-b0c0-49e5-ac7f-0e9977e39366
+# ╟─2131a8a4-b0c0-49e5-ac7f-0e9977e39366
 # ╟─7b5d9c9f-89aa-4e1e-9c47-7b77fa12b0ad
 # ╟─f2a8a94b-4b39-48be-93c4-fa7661d03014
 # ╟─1f993f0e-eb44-4bf6-91b7-971bb133974c
