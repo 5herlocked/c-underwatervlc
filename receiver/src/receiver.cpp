@@ -121,23 +121,28 @@ vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &confi
 
     auto logs = vector<LogEntry>();
 
-    char *serialInputBuffer = new char[32];
+    u_int8_t *serialByteBuffer[1];
+    printf("Started recording\n");
 
     const auto startTime = high_resolution_clock::now();
+
     while (!exit_app) {
         auto startClock = high_resolution_clock::now();
-        if (serialPort.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0) {
-            int analogValue = strtol(serialInputBuffer, nullptr, 10);
-            logs.push_back(
-                    LogEntry{
-                        high_resolution_clock::now() - startTime,
-                        getVoltage(analogValue),
-                        analogValue,
-                        });
-        }
+        serialPort.readBytes(serialByteBuffer, 1, 0, 0);
+        u_int8_t analogVal = *serialByteBuffer[0];
+
+        logs.push_back(
+                LogEntry{
+                    high_resolution_clock::now() - startTime,
+                    getVoltage(analogVal),
+                    analogVal
+                }
+        );
+
         progressBar(logs.size());
         auto recordClock = high_resolution_clock::now();
         double sleepTime = pollTime - ((recordClock - startClock).count() / 1e9);
+        printf("MilliSeconds to sleep: %.2f\n", sleepTime);
         if (sleepTime <= 0) {
             // Negative Sleep
             continue;
