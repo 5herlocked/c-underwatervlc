@@ -86,7 +86,7 @@ convolved = DSP.conv(receiverVector[157:size(receiverVector)[1]], gaussianKernel
 md"Start point: $(@bind start_point NumberField(-1:size(convolved)[1], default=1))"
 
 # ╔═╡ ac3f0a7a-6c96-4df0-9193-5b61af04e126
-md"Size: $(@bind window NumberField(1:size(convolved)[1], default=ratio))"
+md"Size: $(@bind window NumberField(1:size(convolved)[1], default=ratio*10))"
 
 # ╔═╡ 1188f8b9-e645-4b4b-8b8d-23538120e35d
 function getTransmitterPattern(transmitterVector::Vector{Int16})::String
