@@ -85,7 +85,6 @@ void parseArgs(int argc, char *argv[], Configuration &app_config) {
         } else if ((arg == "-s") || (arg == "--dataset")) {
             // Sets a flag telling us to look for the on_100fps and off_100fps files
             // to set a baseline for the dataset
-            // TODO: analyse a full dataset
             app_config.app = APP_TYPE::DATASET_ANALYSIS;
         } else {
             cout << "Unknown option: " << argv[i] << endl;
@@ -94,7 +93,6 @@ void parseArgs(int argc, char *argv[], Configuration &app_config) {
 }
 
 /*
- * TODO: Make analyseVideo a more elegant operation. Currently: it has 2 functions (find a way to unify functions so that all it does is, analyse the video in **one** way)
  * analyseVideo returns the average of the scalar values of the video if using the dataset flag
  *
  * The way forward:
@@ -107,8 +105,6 @@ optional<vector<LogEntry>>
 analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const optional<cv::Scalar> &ledOFFVal) {
     cv::VideoCapture video(config.location.value());
     auto frameMeans = vector<LogEntry>();
-
-    MouseData roiBox;
 
     if (!video.isOpened()) {
         cout << "Cannot open the video file" << endl;
@@ -153,6 +149,8 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
 
         // This should be the ROI mat
         roiMask = frame(roi);
+
+        cv::cvtColor(roiMask, roiMask, cv::COLOR_BGR2GRAY);
 
         cv::Scalar average = cv::mean(roiMask);
         double deltaTime = position / fps;
