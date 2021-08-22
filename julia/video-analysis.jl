@@ -17,7 +17,7 @@ end
 begin
 	using PlutoUI, Plots
 	using FileIO, VideoIO
-	using ImageCore, ImageAxes, ImageShow
+	using Images
 end
 
 # ╔═╡ 9187d1fb-859d-483c-aa2f-4a3b57394315
@@ -56,7 +56,7 @@ md"### Raw interpretation"
 
 
 # ╔═╡ ec6725b9-be67-4f39-bbe2-d520e659eb11
-frame = plot(read(video_file))
+frame = read(video_file)
 
 # ╔═╡ 4085d5eb-5efc-44a3-bede-5827625f59dd
 md"### To HSL"
