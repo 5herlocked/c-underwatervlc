@@ -18,6 +18,8 @@ begin
 	using PlutoUI, Plots
 	using LinearAlgebra, ImageFiltering
 	using FileIO, CSV, DSP
+	
+	plotly()
 end
 
 # ╔═╡ ed83e973-2923-4731-af5b-22f7c71bd084
@@ -40,7 +42,7 @@ md"""### Preprosessing the Data"""
 md"""Number of tracking bits: $(@bind precision NumberField(3:20; default=5))"""
 
 # ╔═╡ 76b61b23-97f8-4ceb-a18e-2c2a7396a7d5
-md"""Ratio of Transmitter to Receiver: $(@bind ratio NumberField(2:100; default=4))"""
+md"""Ratio of Transmitter to Receiver: $(@bind ratio NumberField(2:100))"""
 
 # ╔═╡ aa3e160f-bf62-4ce7-be8a-c5dbba127927
 md"### Using a Gaussian Kernel"
@@ -74,19 +76,10 @@ end
 
 # ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
 begin
-	receiver_url = ".\\test-set\\25hz_100fps_7ph.csv"
+	receiver_url = ".\\test-set\\25hz_100fps_7ph_fix.csv"
 	receiverFile = CSV.File(receiver_url)
 	receiverVector = getVectorFromFile(receiverFile)
 end
-
-# ╔═╡ 4d98558c-5023-47c0-94cd-52881fa95347
-convolved = DSP.conv(receiverVector[157:size(receiverVector)[1]], gaussianKernel)
-
-# ╔═╡ 0b7fb9f8-b70e-4df8-bdfd-26eabcf67b5e
-md"Start point: $(@bind start_point NumberField(-1:size(convolved)[1], default=1))"
-
-# ╔═╡ ac3f0a7a-6c96-4df0-9193-5b61af04e126
-md"Size: $(@bind window NumberField(1:size(convolved)[1], default=ratio*10))"
 
 # ╔═╡ 1188f8b9-e645-4b4b-8b8d-23538120e35d
 function getTransmitterPattern(transmitterVector::Vector{Int16})::String
@@ -125,6 +118,15 @@ transmissionStart = findfirst(transmissionPattern, receiverString)[1]
 # ╔═╡ 7573de12-acf2-43aa-8e7e-42420c72c223
 received_offset = receiverVector[transmissionStart:end]
 
+# ╔═╡ 4d98558c-5023-47c0-94cd-52881fa95347
+convolved = DSP.conv(receiverVector[transmissionStart:end], gaussianKernel)
+
+# ╔═╡ 0b7fb9f8-b70e-4df8-bdfd-26eabcf67b5e
+md"Start point: $(@bind start_point NumberField(-1:size(convolved)[1], default=1))"
+
+# ╔═╡ ac3f0a7a-6c96-4df0-9193-5b61af04e126
+md"Size: $(@bind window NumberField(1:size(convolved)[1], default=ratio*10))"
+
 # ╔═╡ fb972508-11e0-4334-9eed-48f74f27636f
 md"End Point: $(@bind end_point NumberField(1:size(received_offset)[1], default=start_point+window))"
 
@@ -147,9 +149,12 @@ expanded_transmission = expandVector(transmitterVector, ratio)
 # ╔═╡ 3ab6d112-a3bf-4629-b34f-f1e10231b713
 begin
 	x = start_point:end_point
-	y = [convolved[start_point:end_point] received_offset[start_point:end_point] expanded_transmission[start_point:end_point]]
-	plot(x, y, title = "Comparison", label = ["Convolved" "Received" "Transmitted"])
+	y = [received_offset[start_point:end_point] expanded_transmission[start_point:end_point]]
+	plot(x, y, title = "Comparison", label = ["Received" "Transmitted"])
 end
+
+# ╔═╡ dd814a09-12a4-4b90-b2b6-1aff36c6c489
+
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1221,7 +1226,7 @@ version = "0.9.1+5"
 # ╟─96fda257-21e1-49db-8287-c6d978d4b6d0
 # ╟─7573de12-acf2-43aa-8e7e-42420c72c223
 # ╠═2a4e762b-fb5c-4181-90cf-ab1afa1e976d
-# ╟─4d98558c-5023-47c0-94cd-52881fa95347
+# ╠═4d98558c-5023-47c0-94cd-52881fa95347
 # ╠═0b7fb9f8-b70e-4df8-bdfd-26eabcf67b5e
 # ╠═ac3f0a7a-6c96-4df0-9193-5b61af04e126
 # ╠═fb972508-11e0-4334-9eed-48f74f27636f
@@ -1229,8 +1234,9 @@ version = "0.9.1+5"
 # ╟─a0f36b24-65a7-4834-ad44-5b268ecfade8
 # ╟─9b5d9f6b-e0ec-4aa0-b310-af522e14252a
 # ╟─3cb738b5-f4c3-46a8-abeb-321dd3faebf3
-# ╟─1188f8b9-e645-4b4b-8b8d-23538120e35d
-# ╟─2bfa4263-3b0b-4849-b453-a39f2545a88c
-# ╟─82857d7d-08c6-4d06-8a1f-4468e479eb43
+# ╠═1188f8b9-e645-4b4b-8b8d-23538120e35d
+# ╠═2bfa4263-3b0b-4849-b453-a39f2545a88c
+# ╠═82857d7d-08c6-4d06-8a1f-4468e479eb43
+# ╠═dd814a09-12a4-4b90-b2b6-1aff36c6c489
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
