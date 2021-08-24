@@ -11,6 +11,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <iostream>
 
 static bool exit_app = false;
 
