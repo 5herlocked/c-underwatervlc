@@ -70,14 +70,14 @@ end
 # ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 begin
 	transmitter_url = ".\\test-set\\transmitter_25hz_7ph.csv"
-	transmitterFile = CSV.File(transmitter_url)
+	transmitterFile = CSV.File.(transmitter_url)
 	transmitterVector = getVectorFromFile(transmitterFile)
 end
 
 # ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
 begin
 	receiver_url = ".\\test-set\\25hz_100fps_7ph_fix.csv"
-	receiverFile = CSV.File(receiver_url)
+	receiverFile = CSV.File.(receiver_url)
 	receiverVector = getVectorFromFile(receiverFile)
 end
 

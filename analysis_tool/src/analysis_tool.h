@@ -30,15 +30,9 @@ enum APP_TYPE {
     DATASET_ANALYSIS
 };
 
-struct MouseData {
-    int location{};
-    cv::Point points[4];
-};
-
 struct LogEntry {
-    double deltaTime{};
-    cv::Scalar frameAverage{};
-    optional<int> deducedBit{};
+    cv::Scalar frameMean{};
+    cv::Scalar frameStdDev{};
 };
 
 struct Configuration {
@@ -48,16 +42,13 @@ struct Configuration {
     optional<SOURCE_TYPE> source;
     optional<APP_TYPE> app;
     optional<std::string> genericOutput;
-};
-
-struct Options {
-    string shortOpt{};
-    string longOpt{};
-    string description{};
-    string arguments{};
+    optional<cv::ColorConversionCodes> colourSpace;
+    optional<bool> noInteract;
 };
 
 void parseArgs(int argc, char *argv[], Configuration &config);
+
+optional<cv::ColorConversionCodes> getColourSpace(const string& argv);
 
 void analyseFolder(Configuration &config);
 
@@ -66,12 +57,11 @@ optional<vector<LogEntry>> analyseVideo(Configuration &config, const optional<cv
 
 void analyseDataset(Configuration &configuration, const fs::path &ledON, const fs::path &ledOFF);
 
-void createCSV(const vector<LogEntry> &logs, const string &filename);
+void printVideoDispersion(Configuration &config, const cv::Scalar &scalarMeans, const cv::Scalar &scalarStdDev,
+                          const string &title);
 
 void showUsage();
 
 cv::Scalar getScalarAverage(const vector<cv::Scalar> &scalars);
 
 optional<std::string> replaceExtension(const fs::path &path);
-
-void capturePointsCallback(int event, int x, int y, int flags, void *userdata);

@@ -21,9 +21,6 @@ int main(int argc, char *argv[]) {
                 optional<std::string> output_val = replaceExtension(file);
 
                 auto generatedData = analyseVideo(config);
-                if (generatedData.has_value()) {
-                    createCSV(generatedData.value(), output_val.value());
-                }
                 return 0;
             } else {
                 // The file does not exist
@@ -86,10 +83,21 @@ void parseArgs(int argc, char *argv[], Configuration &app_config) {
             // Sets a flag telling us to look for the on_100fps and off_100fps files
             // to set a baseline for the dataset
             app_config.app = APP_TYPE::DATASET_ANALYSIS;
+        } else if ((arg == "-c") || (arg == "--colour")) {
+            app_config.colourSpace = getColourSpace(argv[++i]);
+        } else if ((arg == "-n") || (arg == "--nointeract")) {
+            app_config.noInteract = true;
         } else {
             cout << "Unknown option: " << argv[i] << endl;
         }
     }
+}
+
+optional<cv::ColorConversionCodes> getColourSpace(const string& argv) {
+    if ((argv == "gray") || (argv == "GRAY")) return cv::ColorConversionCodes::COLOR_BGR2GRAY;
+    if ((argv == "hsl") || (argv == "HSL")) return cv::ColorConversionCodes::COLOR_BGR2HLS;
+
+    return nullopt;
 }
 
 /*
@@ -120,23 +128,31 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
         return {};
     }
 
-    cv::namedWindow("source vid", cv::WINDOW_FREERATIO);
+    cv::namedWindow("source vid", cv::WINDOW_AUTOSIZE);
     cv::imshow("source vid", frame);
 
     auto roi = cv::selectROI("source vid", frame, true, false);
 
     cv::Mat roiMask(frame, roi);
 
-    cv::imshow("roi vid", roiMask);
+    cv::Mat roiMod;
 
-    double fps = video.get(cv::CAP_PROP_FPS);
+    if (config.colourSpace.has_value()) {
+        cv::cvtColor(roiMask, roiMod, config.colourSpace.value());
+    } else {
+        roiMod = roiMask;
+    }
+
+    cv::imshow("roi frame", roiMod);
+
+    cv::waitKey(0);
+
     double totalFrames = video.get(cv::CAP_PROP_FRAME_COUNT);
-
-    int position = 0;
 
     cv::destroyAllWindows();
 
-    while (true) {
+
+    for (int i = 0; i < totalFrames; ++i) {
         readSuccess = video.read(frame);
 
         if (!readSuccess) {
@@ -144,42 +160,29 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
             break;
         }
 
-        // increment position so we can keep track of where we are in dT
-        position += 1;
-
         // This should be the ROI mat
         roiMask = frame(roi);
 
-        cv::cvtColor(roiMask, roiMask, cv::COLOR_BGR2GRAY);
-
-        cv::Scalar average = cv::mean(roiMask);
-        double deltaTime = position / fps;
-        optional<int> deducedBit = nullopt;
-
-        // TODO: Make the threshold logic smart
-        if (ledONVal.has_value() && ledOFFVal.has_value()) {
-            // It's a dataset
-            // find diff between ledON and ledOFF
-            // split the diff to get threshold?
-            // deducedBit = average > threshold ? 1 : average < threshold ? 0 : nullopt;
-            auto threshold = getScalarAverage({ ledONVal.value(), ledOFFVal.value() });
-
-            // Refer only to the B of the BRG values
-            if (average[0] > threshold[0]) {
-                deducedBit = 1;
-            } else if (average[0] < threshold[0]) {
-                deducedBit = 0;
-            } else {
-                deducedBit = nullopt;
-            }
+        // Change colour space
+        if (config.colourSpace.has_value()) {
+            cv::cvtColor(roiMask, roiMod, config.colourSpace.value());
+        } else {
+            roiMod = roiMask;
         }
 
+        cv::Scalar mean, stdDev;
+
+        cv::meanStdDev(roiMod, mean, stdDev);
+
         frameMeans.push_back(LogEntry{
-                deltaTime,
-                average,
-                deducedBit
+            mean,
+            stdDev
         });
-        progressBar((float) position / totalFrames, 30);
+
+        // if no interact doesn't have a value
+        if (!config.noInteract.has_value()) {
+            progressBar((float) i / totalFrames, 30);
+        }
     }
 
     video.release();
@@ -202,13 +205,9 @@ void analyseFolder(Configuration &config) {
                 tempConfig.genericOutput = output_val;
 
                 auto generatedData = analyseVideo(tempConfig);
-                if (generatedData.has_value()) {
-                    createCSV(generatedData.value(), tempConfig.genericOutput.value());
-                }
             }
         }
     } else if (config.app.has_value() && config.app.value() == APP_TYPE::DATASET_ANALYSIS) {
-        // TODO: Dataset analysis
         fs::path ledOnFile;
         fs::path ledOffFile;
 
@@ -227,6 +226,7 @@ void analyseFolder(Configuration &config) {
     } else {
         cout << "Congratulations, you have done something mathematically impossible. You must be proud." << endl;
         cout << "Now go fix your options" << endl;
+        showUsage();
         exit(-1);
     }
 }
@@ -242,8 +242,12 @@ optional<std::string> replaceExtension(const fs::path &path) {
 void analyseDataset(Configuration &configuration, const fs::path &ledON, const fs::path &ledOFF) {
     // setup internal variables
     auto tempConfig = configuration;
-    vector<cv::Scalar> scalarEntries = vector<cv::Scalar>();
-    auto getScalar = [&scalarEntries] (const LogEntry& l) { scalarEntries.push_back(l.frameAverage); };
+    vector<cv::Scalar> logMeans = vector<cv::Scalar>();
+    vector<cv::Scalar> logStdDev = vector<cv::Scalar>();
+    auto getScalar = [&logMeans, &logStdDev] (const LogEntry& l) {
+        logMeans.push_back(l.frameMean);
+        logStdDev.push_back(l.frameStdDev);
+    };
 
     // Sets up temporary configuration files
     tempConfig.location = ledON.string();
@@ -251,34 +255,41 @@ void analyseDataset(Configuration &configuration, const fs::path &ledON, const f
     auto scalarAverages = analyseVideo(tempConfig);
     // extract scalar averages from the logs
     for_each(scalarAverages.value().cbegin(), scalarAverages.value().cend(), getScalar);
-    auto ledONAverage = getScalarAverage(scalarEntries);
+    auto ledONAverage = getScalarAverage(logMeans);
+    auto ledONStdDev = getScalarAverage(logStdDev);
 
-    // empty scalar entries
-    scalarEntries.clear();
+    // reset scalar buffer
+    logMeans.clear();
+    logStdDev.clear();
 
     tempConfig.location = ledOFF.string();
     tempConfig.genericOutput = replaceExtension(ledOFF);
     scalarAverages = analyseVideo(tempConfig);
     // extract the scalar averages from the logs
     for_each(scalarAverages.value().cbegin(), scalarAverages.value().cend(), getScalar);
-    auto ledOFFAverage = getScalarAverage(scalarEntries);
+    auto ledOFFAverage = getScalarAverage(logMeans);
+    auto ledOFFStdDev = getScalarAverage(logStdDev);
 
-    // iterate through the rest of the directory
-    for (const auto &file : fs::directory_iterator(configuration.location.value().c_str())) {
-        // Ignore the ON, OFF files
-        if (file.path().filename().string().find("on") != string::npos ||
-            file.path().filename().string().find("off") != string::npos) {
-            continue;
-        } else if (file.path().extension() == ".avi") {
-            optional<std::string> temp = file.path().string();
-            optional<std::string> output_val = replaceExtension(file.path());
-            tempConfig.location = temp;
-            tempConfig.genericOutput = output_val;
+    printVideoDispersion(configuration, ledONAverage, ledONStdDev, "LED ON");
+    printVideoDispersion(configuration, ledOFFAverage, ledOFFStdDev, "LED OFF");
+}
 
-            auto generatedData = analyseVideo(tempConfig, ledONAverage, ledOFFAverage);
-            if (generatedData.has_value()) {
-                createCSV(generatedData.value(), tempConfig.genericOutput.value());
-            }
+void printVideoDispersion(Configuration &config, const cv::Scalar &scalarMeans, const cv::Scalar &scalarStdDev,
+                          const string &title) {
+    printf("%s\n", title.c_str());
+
+    if (config.colourSpace.has_value()) {
+        if (config.colourSpace.value() == cv::COLOR_BGR2GRAY) {
+            printf("\tGRAY\n"
+                   "Mean:\t%.2lf\n"
+                   "StdDev:\t%.2lf\n", scalarMeans[0], scalarStdDev[0]);
+        }
+        if (config.colourSpace.value() == cv::COLOR_BGR2HLS) {
+            printf("\tHUE\tLIGHTNESS\tSATURATION\n"
+                   "Mean:\t%.2lf\t%.2lf\t%.2lf\n"
+                   "StdDev:\t%.2lf\t%.2lf\t%.2lf\n",
+                   scalarMeans[0], scalarMeans[1], scalarMeans[2],
+                   scalarStdDev[0], scalarStdDev[1], scalarStdDev[2]);
         }
     }
 }
@@ -297,49 +308,17 @@ void analyseDataset(Configuration &configuration, const fs::path &ledON, const f
  */
 cv::Scalar getScalarAverage(const vector<cv::Scalar> &scalars) {
     int t = 1;
-    double blueAverage = 0;
-    double redAverage = 0;
-    double greenAverage = 0;
+
+    auto meanStore = cv::Scalar();
 
     for (cv::Scalar l : scalars) {
-        blueAverage += (l[0] - blueAverage) / t;
-        redAverage += (l[1] - redAverage) / t;
-        greenAverage += (l[2] - greenAverage) / t;
-
+        for (int i = 0; i < l.channels; ++i) {
+            meanStore[i] += (l[i] - meanStore[i]) / t;
+        }
         ++t;
     }
 
-    return cv::Scalar(blueAverage, redAverage, greenAverage, 255);
-}
-
-void createCSV(const vector<LogEntry> &logs, const string &filename) {
-    fstream csvStream;
-    csvStream.open(filename + ".csv", ios::out);
-
-    csvStream << "deltaTime" << "," << "blue" << "," << "green" << "," << "red" << "," << "bit" << "\n";
-
-    // frameAverage is of type double[4], we need to destructure it
-    for (const LogEntry &entry : logs) {
-        if (entry.deducedBit.has_value()) {
-            csvStream << entry.deltaTime << "," << entry.frameAverage.val[0] << "," << entry.frameAverage.val[1] << ","
-                      << entry.frameAverage.val[2] << "," << entry.deducedBit.value() << "\n";
-        } else {
-            csvStream << entry.deltaTime << "," << entry.frameAverage.val[0] << "," << entry.frameAverage.val[1] << ","
-                      << entry.frameAverage.val[2] << ", N/A" << "\n";
-        }
-    }
-
-    csvStream.close();
-}
-
-
-void capturePointsCallback(int event, int x, int y, int flags, void *userdata) {
-    auto *data = static_cast<MouseData *>(userdata);
-
-    if (event == cv::EVENT_LBUTTONDOWN && data->location < 4) {
-        data->points[data->location] = cv::Point(x, y);
-        data->location += 1;
-    }
+    return meanStore;
 }
 
 void showUsage() {

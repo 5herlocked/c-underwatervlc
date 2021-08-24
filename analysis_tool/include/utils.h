@@ -18,6 +18,7 @@ static bool exit_app = false;
 #ifdef _WIN32
 
 #include <Windows.h>
+#include <iostream>
 
 void CtrlHandler(DWORD fdwCtrlType) {
     exit_app = (fdwCtrlType == CTRL_C_EVENT);
