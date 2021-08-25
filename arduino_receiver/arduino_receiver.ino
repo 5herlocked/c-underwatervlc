@@ -11,14 +11,13 @@ unsigned long start_time;
 File outputFile;
 
 // FORCE 10k SPS
-unsigned long wait_duration = 1.0/10'000 * 1'000'000;
+unsigned long wait_duration = 1.0 / 10'000 * 1'000'000;
 
-double pollingRate = 1.0/10'000 * 1'000'000;
+double pollingRate = 1.0 / 10'000 * 1'000'000;
 
 void setup() {
     Serial.begin(115200);
-    while (!Serial) {
-        ;
+    while (!Serial) { ;
     }
 
     Serial.print("Initializing SD card...\n");
@@ -54,27 +53,28 @@ void loop() {
                 Serial.write(outputFile.name()); // send back the file name
                 Serial.write(0x01); // ACK
                 break;
-            case 0x09:
-                outputFile.close();
-                Serial.write(outputFile.name()); // send back the file name
-                Serial.write(0x09); //ACK
-                break;
-            default:
-                //do nothing
-                break;
+                case 0x09:
+                    outputFile.close();
+                    Serial.write(outputFile.name()); // send back the file name
+                    Serial.write(0x09); //ACK
+                    break;
+                    default:
+                        //do nothing
+                        break;
         }
-      auto next_clock = micros();
+        auto next_clock = micros();
 
-    val = analogRead(analogPin);
-  
-    // Write in csv to file
-    outputFile.write(micros() - start_time);
-    outputFile.write(',');
-    outputFile.write(val);
+        val = analogRead(analogPin);
 
-    auto sleep_time = wait_duration - ((micros() - next_clock));
+        // Write in csv to file
+        outputFile.write(micros() - start_time);
+        outputFile.write(',');
+        outputFile.write(val);
 
-    if (sleep_time > 0) {
-        delayMicroseconds(sleep_time);
+        auto sleep_time = wait_duration - ((micros() - next_clock));
+
+        if (sleep_time > 0) {
+            delayMicroseconds(sleep_time);
+        }
     }
-  }
+}
