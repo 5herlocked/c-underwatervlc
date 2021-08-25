@@ -40,7 +40,7 @@ md"""### Preprosessing the Data"""
 md"""Number of tracking bits: $(@bind precision NumberField(3:20; default=5))"""
 
 # ╔═╡ 76b61b23-97f8-4ceb-a18e-2c2a7396a7d5
-md"""Ratio of Transmitter to Receiver: $(@bind ratio NumberField(2:100))"""
+md"""Ratio of Transmitter to Receiver: $(@bind ratio NumberField(2:100; default=4))"""
 
 # ╔═╡ aa3e160f-bf62-4ce7-be8a-c5dbba127927
 md"### Using a Gaussian Kernel"
