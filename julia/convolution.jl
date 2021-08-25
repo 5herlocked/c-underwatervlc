@@ -67,6 +67,11 @@ function getVectorFromFile(file::CSV.File)::Vector{Int16}
 	return fileVector
 end
 
+# ╔═╡ 955fca18-5623-40ed-b25a-31c6e523781f
+function getVectorFromFile(row::CSV.Row)::Int16
+	return row.bit
+end
+
 # ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 begin
 	transmitter_url = ".\\test-set\\transmitter_25hz_7ph.csv"
@@ -144,7 +149,7 @@ function expandVector(vector, ratio)::Vector
 end
 
 # ╔═╡ 96fda257-21e1-49db-8287-c6d978d4b6d0
-expanded_transmission = expandVector(transmitterVector, ratio)
+expanded_transmission = expandVector.(transmitterVector, ratio)
 
 # ╔═╡ 3ab6d112-a3bf-4629-b34f-f1e10231b713
 begin
@@ -1219,12 +1224,12 @@ version = "0.9.1+5"
 # ╟─0ee4088d-f04d-4d6f-9883-f0d175712867
 # ╟─4ae48d1e-d0f1-4d3a-a457-83c108aa4d17
 # ╟─76b61b23-97f8-4ceb-a18e-2c2a7396a7d5
-# ╟─ab21165f-3e1f-4d49-b4b8-aa39786951cc
-# ╟─bc4f5957-48cc-41eb-8c8d-e0e25ad19637
+# ╠═ab21165f-3e1f-4d49-b4b8-aa39786951cc
+# ╠═bc4f5957-48cc-41eb-8c8d-e0e25ad19637
 # ╟─47e2d884-24e4-4081-ba49-7fead3f430d4
 # ╟─aa3e160f-bf62-4ce7-be8a-c5dbba127927
-# ╟─96fda257-21e1-49db-8287-c6d978d4b6d0
-# ╟─7573de12-acf2-43aa-8e7e-42420c72c223
+# ╠═96fda257-21e1-49db-8287-c6d978d4b6d0
+# ╠═7573de12-acf2-43aa-8e7e-42420c72c223
 # ╠═2a4e762b-fb5c-4181-90cf-ab1afa1e976d
 # ╠═4d98558c-5023-47c0-94cd-52881fa95347
 # ╠═0b7fb9f8-b70e-4df8-bdfd-26eabcf67b5e
@@ -1233,9 +1238,10 @@ version = "0.9.1+5"
 # ╠═3ab6d112-a3bf-4629-b34f-f1e10231b713
 # ╟─a0f36b24-65a7-4834-ad44-5b268ecfade8
 # ╟─9b5d9f6b-e0ec-4aa0-b310-af522e14252a
-# ╟─3cb738b5-f4c3-46a8-abeb-321dd3faebf3
-# ╠═1188f8b9-e645-4b4b-8b8d-23538120e35d
-# ╠═2bfa4263-3b0b-4849-b453-a39f2545a88c
+# ╠═3cb738b5-f4c3-46a8-abeb-321dd3faebf3
+# ╠═955fca18-5623-40ed-b25a-31c6e523781f
+# ╟─1188f8b9-e645-4b4b-8b8d-23538120e35d
+# ╟─2bfa4263-3b0b-4849-b453-a39f2545a88c
 # ╠═82857d7d-08c6-4d06-8a1f-4468e479eb43
 # ╠═dd814a09-12a4-4b90-b2b6-1aff36c6c489
 # ╟─00000000-0000-0000-0000-000000000001

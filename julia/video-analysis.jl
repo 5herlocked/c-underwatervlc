@@ -17,14 +17,16 @@ end
 begin
 	using PlutoUI, Plots
 	using FileIO, VideoIO
-	using Images
+	using Images, ImageDraw
+	using Statistics
+	plotly()
 end
 
 # ╔═╡ 9187d1fb-859d-483c-aa2f-4a3b57394315
 md"This will directly reference videos we want to use and will then use this to generate various possible analysis sets to find how the correlation between changing various parameters of our experiments affects the values of the transmitter"
 
 # ╔═╡ fbd46e5e-f1d8-4f88-85ec-43e0010d45c6
-md"Testing Mode: $(@bind testing PlutoUI.CheckBox(default=false))"
+md"Testing Mode: $(@bind testing PlutoUI.CheckBox(default=true))"
 
 # ╔═╡ 53365d23-5fe5-4dba-89b2-0346bddeee7d
 begin
@@ -47,19 +49,13 @@ begin
 end
 
 # ╔═╡ 03922c83-439a-4e56-b4b8-e9a537921d67
-md"Frame Number: $(@bind frame_number NumberField(1:30000))"
+md"Frame Number: $(@bind frame_number NumberField(1:VideoIO.get_number_frames(video_url)))"
 
-# ╔═╡ 6a14a827-b626-4bec-9101-ccad972f40f9
-
+# ╔═╡ 2ee07318-0436-420e-ba8a-3a61d7cb9b36
+max(5)
 
 # ╔═╡ e6649764-7eee-4546-8b0c-464dae4d8a91
 md"### Raw interpretation"
-
-# ╔═╡ ebe1c37a-14f6-473a-9cbe-6e4caf6ca2e9
-
-
-# ╔═╡ ec6725b9-be67-4f39-bbe2-d520e659eb11
-frame = read(video_file)
 
 # ╔═╡ 4085d5eb-5efc-44a3-bede-5827625f59dd
 md"### To HSL"
@@ -67,23 +63,62 @@ md"### To HSL"
 # ╔═╡ 19ecb730-a7e9-4289-a4f9-e9421b570f39
 md"### To Grayscale"
 
-# ╔═╡ 4c2c9e37-871c-4e09-a714-5124e4c5f8a0
-gray_image = Gray.(frame)
-
 # ╔═╡ 0bccb699-0223-4eb0-9665-941980b32219
 md"### Helper Functions"
+
+# ╔═╡ 31540f31-0dbf-41f2-9004-3c0a6a6291bb
+function getFrame(frameNum)
+	seekstart(video_file)
+	skipframes(video_file, frameNum)
+	return read(video_file)
+end
+
+# ╔═╡ c3d6c0be-24d2-4102-bf7d-d455e41b8a07
+current_frame = getFrame(frame_number)
+
+# ╔═╡ 697a8193-69d3-4d20-9883-a198ba09f3e7
+md"""
+ROI LeftEdge: $(@bind leftEdge NumberField(1:size(current_frame)[2]; default=335))
+
+ROI RightEdge: $(@bind rightEdge NumberField(leftEdge:size(current_frame)[2]; default=434))
+
+ROI TopEdge: $(@bind topEdge NumberField(1:size(current_frame)[1]; default=235))
+
+ROI BottomEdge: $(@bind bottomEdge NumberField(topEdge:size(current_frame)[1]; default=265))
+"""
+
+# ╔═╡ ec6725b9-be67-4f39-bbe2-d520e659eb11
+frame = current_frame
+
+# ╔═╡ 21782bde-5a98-4e10-a9b8-1001ad647c71
+roi = frame[topEdge:bottomEdge, leftEdge:rightEdge]
+
+# ╔═╡ 106aca3e-0225-4e84-835c-2fb4a08f5e1b
+roi_mean = mean(roi)
+
+# ╔═╡ 4c2c9e37-871c-4e09-a714-5124e4c5f8a0
+gray_image = Gray.(current_frame)
+
+# ╔═╡ dcb2f60b-e34b-439e-95d0-3ca5ef85f4a6
+gray_roi = gray_image[topEdge:bottomEdge, leftEdge:rightEdge]
+
+# ╔═╡ 2bf01fc0-c0ed-4585-9f95-35aee24b6829
+gray_roi_mean = mean(gray_roi)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+ImageDraw = "4381153b-2b60-58ae-a1ba-fd683676385f"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 VideoIO = "d6d074c3-1acf-5d4c-9a43-ef38773959a2"
 
 [compat]
 FileIO = "~1.11.0"
+ImageDraw = "~0.2.5"
 Images = "~0.24.1"
 Plots = "~1.15.2"
 PlutoUI = "~0.7.9"
@@ -438,6 +473,12 @@ deps = ["ColorVectorSpace", "Distances", "ImageCore", "ImageMorphology", "Linear
 git-tree-sha1 = "6378c34a3c3a216235210d19b9f495ecfff2f85f"
 uuid = "51556ac3-7006-55f5-8cb3-34580c88182d"
 version = "0.2.13"
+
+[[ImageDraw]]
+deps = ["Distances", "ImageCore", "LinearAlgebra"]
+git-tree-sha1 = "6ed6e945d909f87c3013e391dcd3b2a56e48b331"
+uuid = "4381153b-2b60-58ae-a1ba-fd683676385f"
+version = "0.2.5"
 
 [[ImageFiltering]]
 deps = ["CatIndices", "ColorVectorSpace", "ComputationalResources", "DataStructures", "FFTViews", "FFTW", "ImageCore", "LinearAlgebra", "OffsetArrays", "Requires", "SparseArrays", "StaticArrays", "Statistics", "TiledIteration"]
@@ -1323,13 +1364,19 @@ version = "0.9.1+5"
 # ╠═53365d23-5fe5-4dba-89b2-0346bddeee7d
 # ╠═ed480a73-e878-4bb3-bea4-dc19960d7762
 # ╠═03922c83-439a-4e56-b4b8-e9a537921d67
-# ╠═6a14a827-b626-4bec-9101-ccad972f40f9
+# ╠═2ee07318-0436-420e-ba8a-3a61d7cb9b36
+# ╠═c3d6c0be-24d2-4102-bf7d-d455e41b8a07
+# ╟─697a8193-69d3-4d20-9883-a198ba09f3e7
 # ╟─e6649764-7eee-4546-8b0c-464dae4d8a91
-# ╠═ebe1c37a-14f6-473a-9cbe-6e4caf6ca2e9
 # ╠═ec6725b9-be67-4f39-bbe2-d520e659eb11
+# ╠═21782bde-5a98-4e10-a9b8-1001ad647c71
+# ╠═106aca3e-0225-4e84-835c-2fb4a08f5e1b
 # ╟─4085d5eb-5efc-44a3-bede-5827625f59dd
 # ╟─19ecb730-a7e9-4289-a4f9-e9421b570f39
 # ╠═4c2c9e37-871c-4e09-a714-5124e4c5f8a0
+# ╠═dcb2f60b-e34b-439e-95d0-3ca5ef85f4a6
+# ╠═2bf01fc0-c0ed-4585-9f95-35aee24b6829
 # ╟─0bccb699-0223-4eb0-9665-941980b32219
+# ╠═31540f31-0dbf-41f2-9004-3c0a6a6291bb
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
