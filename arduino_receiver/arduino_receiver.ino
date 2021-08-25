@@ -13,8 +13,6 @@ File outputFile;
 // FORCE 10k SPS
 unsigned long wait_duration = 1.0 / 10'000 * 1'000'000;
 
-double pollingRate = 1.0 / 10'000 * 1'000'000;
-
 void setup() {
     Serial.begin(115200);
     while (!Serial) { ;
@@ -49,7 +47,7 @@ void loop() {
         switch (r) {
             case 0x01:
                 start_time = micros();
-                // outputFile = SD.open();
+                outputFile = SD.open("receiver" + name + ".csv", FILE_WRITE);
                 Serial.write(outputFile.name()); // send back the file name
                 Serial.write(0x01); // ACK
                 break;
