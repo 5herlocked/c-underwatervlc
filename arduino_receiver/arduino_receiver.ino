@@ -53,28 +53,29 @@ void loop() {
                 Serial.write(outputFile.name()); // send back the file name
                 Serial.write(0x01); // ACK
                 break;
-                case 0x09:
-                    outputFile.close();
-                    Serial.write(outputFile.name()); // send back the file name
-                    Serial.write(0x09); //ACK
-                    break;
-                    default:
-                        //do nothing
-                        break;
+            case 0x09:
+                outputFile.close();
+                Serial.write(outputFile.name()); // send back the file name
+                Serial.write(0x09); //ACK
+                break;
+            default:
+                //do nothing
+                break;
         }
-        auto next_clock = micros();
+    }
 
-        val = analogRead(analogPin);
+    auto next_clock = micros();
 
-        // Write in csv to file
-        outputFile.write(micros() - start_time);
-        outputFile.write(',');
-        outputFile.write(val);
+    val = analogRead(analogPin);
 
-        auto sleep_time = wait_duration - ((micros() - next_clock));
+    // Write in csv to file
+    outputFile.write(micros() - start_time);
+    outputFile.write(',');
+    outputFile.write(val);
 
-        if (sleep_time > 0) {
-            delayMicroseconds(sleep_time);
-        }
+    auto sleep_time = wait_duration - ((micros() - next_clock));
+
+    if (sleep_time > 0) {
+        delayMicroseconds(sleep_time);
     }
 }
