@@ -17,7 +17,7 @@ end
 begin
 	using PlutoUI, Plots
 	using LinearAlgebra, ImageFiltering
-	using FileIO, CSV
+	using FileIO, CSV, DSP
 end
 
 # ╔═╡ ed83e973-2923-4731-af5b-22f7c71bd084
@@ -30,20 +30,8 @@ md"""
 I'll fetch all kinds of csv's in here and then get their BER's
 """
 
-# ╔═╡ da5bccf6-168b-4ae8-a2f0-eb2a7872f64e
-receiver_url = ".\\test-set\\25hz_100fps_7ph.csv"
-
-# ╔═╡ 3b4dcf0d-563a-4f14-a775-ce2524c24448
-transmitter_url = ".\\test-set\\transmitter_25hz_7ph.csv"
-
 # ╔═╡ d9fd2597-a500-41de-afb6-3259fb0fd258
 md"""Testing Mode: $(@bind testingMode CheckBox(default=true))"""
-
-# ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
-transmitterFile = CSV.File(transmitter_url)
-
-# ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
-receiverFile = CSV.File(receiver_url)
 
 # ╔═╡ 0ee4088d-f04d-4d6f-9883-f0d175712867
 md"""### Preprosessing the Data"""
@@ -53,6 +41,18 @@ md"""Number of tracking bits: $(@bind precision NumberField(3:20; default=5))"""
 
 # ╔═╡ 76b61b23-97f8-4ceb-a18e-2c2a7396a7d5
 md"""Ratio of Transmitter to Receiver: $(@bind ratio NumberField(2:100; default=4))"""
+
+# ╔═╡ aa3e160f-bf62-4ce7-be8a-c5dbba127927
+md"### Using a Gaussian Kernel"
+
+# ╔═╡ 2a4e762b-fb5c-4181-90cf-ab1afa1e976d
+gaussianKernel = Kernel.gaussian((ratio/4, ))
+
+# ╔═╡ a0f36b24-65a7-4834-ad44-5b268ecfade8
+md"## Summary"
+
+# ╔═╡ 9b5d9f6b-e0ec-4aa0-b310-af522e14252a
+md"#### Helper Functions"
 
 # ╔═╡ 3cb738b5-f4c3-46a8-abeb-321dd3faebf3
 function getVectorFromFile(file::CSV.File)::Vector{Int16}
@@ -65,11 +65,28 @@ function getVectorFromFile(file::CSV.File)::Vector{Int16}
 	return fileVector
 end
 
-# ╔═╡ ba3dba36-5d0d-409b-9345-2b8eda62d720
-transmitterVector = getVectorFromFile(transmitterFile)
+# ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
+begin
+	transmitter_url = ".\\test-set\\transmitter_25hz_7ph.csv"
+	transmitterFile = CSV.File(transmitter_url)
+	transmitterVector = getVectorFromFile(transmitterFile)
+end
 
-# ╔═╡ fe1ae4f3-03eb-46e6-8c19-6d11ee451d7f
-receiverVector = getVectorFromFile(receiverFile)
+# ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
+begin
+	receiver_url = ".\\test-set\\25hz_100fps_7ph.csv"
+	receiverFile = CSV.File(receiver_url)
+	receiverVector = getVectorFromFile(receiverFile)
+end
+
+# ╔═╡ 4d98558c-5023-47c0-94cd-52881fa95347
+convolved = DSP.conv(receiverVector[157:size(receiverVector)[1]], gaussianKernel)
+
+# ╔═╡ 0b7fb9f8-b70e-4df8-bdfd-26eabcf67b5e
+md"Start point: $(@bind start_point NumberField(-1:size(convolved)[1], default=1))"
+
+# ╔═╡ ac3f0a7a-6c96-4df0-9193-5b61af04e126
+md"Size: $(@bind window NumberField(1:size(convolved)[1], default=ratio*10))"
 
 # ╔═╡ 1188f8b9-e645-4b4b-8b8d-23538120e35d
 function getTransmitterPattern(transmitterVector::Vector{Int16})::String
@@ -103,21 +120,42 @@ end
 receiverString = getReceiverString(receiverVector)
 
 # ╔═╡ 47e2d884-24e4-4081-ba49-7fead3f430d4
-transmissionRange = findfirst(transmissionPattern, receiverString)
+transmissionStart = findfirst(transmissionPattern, receiverString)[1]
 
-# ╔═╡ 9b7ca4a3-9f14-470a-a5a6-d64890762a11
-transmissionStart = transmissionRange == nothing ? -1 : transmissionRange.start
+# ╔═╡ 7573de12-acf2-43aa-8e7e-42420c72c223
+received_offset = receiverVector[transmissionStart:end]
 
-# ╔═╡ aa3e160f-bf62-4ce7-be8a-c5dbba127927
-md"### Using a Gaussian Kernel"
+# ╔═╡ fb972508-11e0-4334-9eed-48f74f27636f
+md"End Point: $(@bind end_point NumberField(1:size(received_offset)[1], default=start_point+window))"
 
-# ╔═╡ 2a4e762b-fb5c-4181-90cf-ab1afa1e976d
-gaussianKernel = Kernel.gaussian((ratio/2, ))
+# ╔═╡ 82857d7d-08c6-4d06-8a1f-4468e479eb43
+function expandVector(vector, ratio)::Vector
+	new_vec = Vector{Int16}()
+	
+	for i in vector
+		for j in range(1, ratio; step=1)
+			append!(new_vec, i)
+		end
+	end
+	
+	return new_vec
+end
+
+# ╔═╡ 96fda257-21e1-49db-8287-c6d978d4b6d0
+expanded_transmission = expandVector(transmitterVector, ratio)
+
+# ╔═╡ 3ab6d112-a3bf-4629-b34f-f1e10231b713
+begin
+	x = start_point:end_point
+	y = [convolved[start_point:end_point] received_offset[start_point:end_point] expanded_transmission[start_point:end_point]]
+	plot(x, y, title = "Comparison", label = ["Convolved" "Received" "Transmitted"])
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 ImageFiltering = "6a3955dd-da59-5b1f-98d4-e7296123deb5"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -126,6 +164,7 @@ PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
 CSV = "~0.8.5"
+DSP = "~0.7.3"
 FileIO = "~1.10.1"
 ImageFiltering = "~0.6.22"
 Plots = "~1.19.4"
@@ -237,6 +276,12 @@ git-tree-sha1 = "537c988076d001469093945f3bd0b300b8d3a7f3"
 uuid = "dc8bdbbb-1ca9-579f-8c36-e416f6a65cce"
 version = "1.0.1"
 
+[[DSP]]
+deps = ["Compat", "FFTW", "IterTools", "LinearAlgebra", "Polynomials", "Random", "Reexport", "SpecialFunctions", "Statistics"]
+git-tree-sha1 = "1edc3eb6cd0ec2b5193ac6d37c1b1310044550fe"
+uuid = "717857b8-e6f2-59f4-9121-6e50c889abd2"
+version = "0.7.3"
+
 [[DataAPI]]
 git-tree-sha1 = "ee400abb2298bd13bfc3df1c412ed228061a2385"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
@@ -286,6 +331,11 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "b3bfd02e98aedfa5cf885665493c5598c350cd2f"
 uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
 version = "2.2.10+0"
+
+[[ExprTools]]
+git-tree-sha1 = "b7e3d17636b348f005f11040025ae8c6f645fe92"
+uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
+version = "0.1.6"
 
 [[FFMPEG]]
 deps = ["FFMPEG_jll"]
@@ -437,6 +487,12 @@ version = "2018.0.3+2"
 [[InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+
+[[Intervals]]
+deps = ["Dates", "Printf", "RecipesBase", "Serialization", "TimeZones"]
+git-tree-sha1 = "323a38ed1952d30586d0fe03412cde9399d3618b"
+uuid = "d8418881-c3e1-53bb-8760-2df7ec849ed5"
+version = "1.5.0"
 
 [[IterTools]]
 git-tree-sha1 = "05110a2ab1fc5f932622ffea2a003221f4782c18"
@@ -624,6 +680,12 @@ version = "1.0.0"
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
+[[Mocking]]
+deps = ["ExprTools"]
+git-tree-sha1 = "748f6e1e4de814b101911e64cc12d83a6af66782"
+uuid = "78c3b35d-d492-501b-9361-3d52fe80e533"
+version = "0.7.2"
+
 [[MosaicViews]]
 deps = ["MappedArrays", "OffsetArrays", "PaddedViews", "StackViews"]
 git-tree-sha1 = "b34e3bc3ca7c94914418637cb10cc4d1d80d877d"
@@ -632,6 +694,12 @@ version = "0.3.3"
 
 [[MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
+
+[[MutableArithmetics]]
+deps = ["LinearAlgebra", "SparseArrays", "Test"]
+git-tree-sha1 = "3927848ccebcc165952dc0d9ac9aa274a87bfe01"
+uuid = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
+version = "0.2.20"
 
 [[NaNMath]]
 git-tree-sha1 = "bfe47e760d60b82b66b61d2d44128b62e3a369fb"
@@ -727,6 +795,12 @@ deps = ["Base64", "Dates", "InteractiveUtils", "JSON", "Logging", "Markdown", "R
 git-tree-sha1 = "44e225d5837e2a2345e69a1d1e01ac2443ff9fcb"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 version = "0.7.9"
+
+[[Polynomials]]
+deps = ["Intervals", "LinearAlgebra", "MutableArithmetics", "RecipesBase"]
+git-tree-sha1 = "0bbfdcd8cda81b8144de4be8a67f5717e959a005"
+uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
+version = "2.0.14"
 
 [[PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -900,6 +974,12 @@ deps = ["OffsetArrays"]
 git-tree-sha1 = "52c5f816857bfb3291c7d25420b1f4aca0a74d18"
 uuid = "06e1c1a7-607b-532d-9fad-de7d9aa2abac"
 version = "0.3.0"
+
+[[TimeZones]]
+deps = ["Dates", "Future", "LazyArtifacts", "Mocking", "Pkg", "Printf", "RecipesBase", "Serialization", "Unicode"]
+git-tree-sha1 = "81753f400872e5074768c9a77d4c44e70d409ef0"
+uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
+version = "1.5.6"
 
 [[URIs]]
 git-tree-sha1 = "97bbe755a53fe859669cd907f2d96aee8d2c1355"
@@ -1128,24 +1208,29 @@ version = "0.9.1+5"
 # ╠═7df5bb30-f0c2-11eb-27c1-5fb91b62858a
 # ╟─ed83e973-2923-4731-af5b-22f7c71bd084
 # ╟─73ffab87-a686-4df5-939b-84fe60b959bd
-# ╠═da5bccf6-168b-4ae8-a2f0-eb2a7872f64e
-# ╠═3b4dcf0d-563a-4f14-a775-ce2524c24448
 # ╠═d9fd2597-a500-41de-afb6-3259fb0fd258
 # ╠═a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 # ╠═15747c5d-1b10-4b25-ba6f-2de9336c2087
 # ╟─0ee4088d-f04d-4d6f-9883-f0d175712867
 # ╟─4ae48d1e-d0f1-4d3a-a457-83c108aa4d17
 # ╟─76b61b23-97f8-4ceb-a18e-2c2a7396a7d5
-# ╟─ba3dba36-5d0d-409b-9345-2b8eda62d720
-# ╟─fe1ae4f3-03eb-46e6-8c19-6d11ee451d7f
 # ╟─ab21165f-3e1f-4d49-b4b8-aa39786951cc
-# ╠═bc4f5957-48cc-41eb-8c8d-e0e25ad19637
-# ╠═47e2d884-24e4-4081-ba49-7fead3f430d4
-# ╠═9b7ca4a3-9f14-470a-a5a6-d64890762a11
+# ╟─bc4f5957-48cc-41eb-8c8d-e0e25ad19637
+# ╟─47e2d884-24e4-4081-ba49-7fead3f430d4
+# ╟─aa3e160f-bf62-4ce7-be8a-c5dbba127927
+# ╟─96fda257-21e1-49db-8287-c6d978d4b6d0
+# ╟─7573de12-acf2-43aa-8e7e-42420c72c223
+# ╠═2a4e762b-fb5c-4181-90cf-ab1afa1e976d
+# ╟─4d98558c-5023-47c0-94cd-52881fa95347
+# ╠═0b7fb9f8-b70e-4df8-bdfd-26eabcf67b5e
+# ╠═ac3f0a7a-6c96-4df0-9193-5b61af04e126
+# ╠═fb972508-11e0-4334-9eed-48f74f27636f
+# ╠═3ab6d112-a3bf-4629-b34f-f1e10231b713
+# ╟─a0f36b24-65a7-4834-ad44-5b268ecfade8
+# ╟─9b5d9f6b-e0ec-4aa0-b310-af522e14252a
 # ╟─3cb738b5-f4c3-46a8-abeb-321dd3faebf3
 # ╟─1188f8b9-e645-4b4b-8b8d-23538120e35d
 # ╟─2bfa4263-3b0b-4849-b453-a39f2545a88c
-# ╟─aa3e160f-bf62-4ce7-be8a-c5dbba127927
-# ╠═2a4e762b-fb5c-4181-90cf-ab1afa1e976d
+# ╟─82857d7d-08c6-4d06-8a1f-4468e479eb43
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

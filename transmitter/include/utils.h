@@ -2,6 +2,7 @@
 #define TRANSMITTER_UTILS_H
 
 #pragma once
+#include "iostream"
 #include <sys/types.h>
 #include <sys/stat.h>
 

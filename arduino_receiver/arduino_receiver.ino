@@ -63,14 +63,10 @@ void loop() {
                 //do nothing
                 break;
         }
-    }
->>>>>>> Stashed changes
-
-void loop() {
-    auto next_clock = micros();
+      auto next_clock = micros();
 
     val = analogRead(analogPin);
-
+  
     // Write in csv to file
     outputFile.write(micros() - start_time);
     outputFile.write(',');
@@ -81,4 +77,4 @@ void loop() {
     if (sleep_time > 0) {
         delayMicroseconds(sleep_time);
     }
-}
+  }

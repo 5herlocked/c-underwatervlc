@@ -45,7 +45,6 @@ int main(int argc, char *argv[]) {
 }
 
 void parseArgs(int argc, char *argv[], Configuration &app_config) {
-    // TODO: Complete parseArgs
     for (int i = 1; i < argc; ++i) {
         // Stores the option
         string arg = argv[i];
@@ -85,7 +84,6 @@ void parseArgs(int argc, char *argv[], Configuration &app_config) {
         } else if ((arg == "-s") || (arg == "--dataset")) {
             // Sets a flag telling us to look for the on_100fps and off_100fps files
             // to set a baseline for the dataset
-            // TODO: analyse a full dataset
             app_config.app = APP_TYPE::DATASET_ANALYSIS;
         } else {
             cout << "Unknown option: " << argv[i] << endl;
@@ -140,7 +138,7 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
 
     cv::destroyAllWindows();
 
-    while (true) {
+    for (int i = 0; i < totalFrames; ++i) {
         readSuccess = video.read(frame);
 
         if (!readSuccess) {
@@ -148,14 +146,11 @@ analyseVideo(Configuration &config, const optional<cv::Scalar> &ledONVal, const 
             break;
         }
 
-        // increment position so we can keep track of where we are in dT
-        position += 1;
-
         // This should be the ROI mat
         roiMask = frame(roi);
 
         cv::Scalar average = cv::mean(roiMask);
-        double deltaTime = position / fps;
+        double deltaTime = (double)i / fps;
         optional<int> deducedBit = nullopt;
 
         // TODO: Make the threshold logic smart
@@ -299,19 +294,17 @@ void analyseDataset(Configuration &configuration, const fs::path &ledON, const f
  */
 cv::Scalar getScalarAverage(const vector<cv::Scalar> &scalars) {
     int t = 1;
-    double blueAverage = 0;
-    double redAverage = 0;
-    double greenAverage = 0;
+
+    auto meanStore = cv::Scalar();
 
     for (cv::Scalar l : scalars) {
-        blueAverage += (l[0] - blueAverage) / t;
-        redAverage += (l[1] - redAverage) / t;
-        greenAverage += (l[2] - greenAverage) / t;
-
+        for (int i = 0; i < l.channels; ++i) {
+            meanStore[i] += (l[i] - meanStore[i]) / t;
+        }
         ++t;
     }
 
-    return cv::Scalar(blueAverage, redAverage, greenAverage, 255);
+    return meanStore;
 }
 
 void createCSV(const vector<LogEntry> &logs, const string &filename) {
@@ -334,18 +327,7 @@ void createCSV(const vector<LogEntry> &logs, const string &filename) {
     csvStream.close();
 }
 
-
-void capturePointsCallback(int event, int x, int y, int flags, void *userdata) {
-    auto *data = static_cast<MouseData *>(userdata);
-
-    if (event == cv::EVENT_LBUTTONDOWN && data->location < 4) {
-        data->points[data->location] = cv::Point(x, y);
-        data->location += 1;
-    }
-}
-
 void showUsage() {
-    // TODO: Fill out help section
     cout << "./analysis_tool -s -f <file_path> -d <folder_path> -o <output_name>" << endl;
     cout << "-s or --dataset\t: Sets the dataset flag and stipulates that the included folder path contains a full "
             "dataset that can be analysed contextually" << endl;
