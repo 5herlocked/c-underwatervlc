@@ -25,34 +25,11 @@ end
 # ╔═╡ 9187d1fb-859d-483c-aa2f-4a3b57394315
 md"This will directly reference videos we want to use and will then use this to generate various possible analysis sets to find how the correlation between changing various parameters of our experiments affects the values of the transmitter"
 
-# ╔═╡ fbd46e5e-f1d8-4f88-85ec-43e0010d45c6
-md"Testing Mode: $(@bind testing PlutoUI.CheckBox(default=true))"
-
 # ╔═╡ 53365d23-5fe5-4dba-89b2-0346bddeee7d
-begin
-	video_url = ""
-	if testing
-		video_url = "C:\\Users\\camv7\\Downloads\\MORSE\\test_set\\25hz_100fps_7ph.avi"
-	else
-		md"Pick Video to manipulate: $(@bind video_url FilePicker())"
-	end
-end
-
-# ╔═╡ ed480a73-e878-4bb3-bea4-dc19960d7762
-begin
-	video_file = ""
-	if testing
-		video_file = openvideo(video_url)
-	elseif video_url != ""
-		video_file = openvideo(video_url)
-	end
-end
+video_url = "C:\\Users\\camv7\\Downloads\\MORSE\\test_set\\25hz_100fps_7ph.avi"
 
 # ╔═╡ 03922c83-439a-4e56-b4b8-e9a537921d67
 md"Frame Number: $(@bind frame_number NumberField(1:VideoIO.get_number_frames(video_url)))"
-
-# ╔═╡ 2ee07318-0436-420e-ba8a-3a61d7cb9b36
-max(5)
 
 # ╔═╡ e6649764-7eee-4546-8b0c-464dae4d8a91
 md"### Raw interpretation"
@@ -65,6 +42,13 @@ md"### To Grayscale"
 
 # ╔═╡ 0bccb699-0223-4eb0-9665-941980b32219
 md"### Helper Functions"
+
+# ╔═╡ ebdebe99-3f77-4c15-8265-f78de79c0a26
+function convertVideo()
+end
+
+# ╔═╡ ed480a73-e878-4bb3-bea4-dc19960d7762
+video_file = convertVideo(openvideo(video_url))
 
 # ╔═╡ 31540f31-0dbf-41f2-9004-3c0a6a6291bb
 function getFrame(frameNum)
@@ -1360,11 +1344,9 @@ version = "0.9.1+5"
 # ╔═╡ Cell order:
 # ╠═610c0d50-02c7-11ec-0852-e96a00cc66d6
 # ╟─9187d1fb-859d-483c-aa2f-4a3b57394315
-# ╠═fbd46e5e-f1d8-4f88-85ec-43e0010d45c6
 # ╠═53365d23-5fe5-4dba-89b2-0346bddeee7d
 # ╠═ed480a73-e878-4bb3-bea4-dc19960d7762
 # ╠═03922c83-439a-4e56-b4b8-e9a537921d67
-# ╠═2ee07318-0436-420e-ba8a-3a61d7cb9b36
 # ╠═c3d6c0be-24d2-4102-bf7d-d455e41b8a07
 # ╟─697a8193-69d3-4d20-9883-a198ba09f3e7
 # ╟─e6649764-7eee-4546-8b0c-464dae4d8a91
@@ -1378,5 +1360,6 @@ version = "0.9.1+5"
 # ╠═2bf01fc0-c0ed-4585-9f95-35aee24b6829
 # ╟─0bccb699-0223-4eb0-9665-941980b32219
 # ╠═31540f31-0dbf-41f2-9004-3c0a6a6291bb
+# ╠═ebdebe99-3f77-4c15-8265-f78de79c0a26
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
