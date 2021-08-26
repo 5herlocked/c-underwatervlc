@@ -18,10 +18,8 @@
 using namespace std;
 
 struct Configuration {
-    // This should be separated into private variables and public accessor methods but
-    // I am becoming a little lazy
     string arduinoSource{};
-    double pollingRate{};
+    int pollingRate{};
     optional<string> output{};
 };
 

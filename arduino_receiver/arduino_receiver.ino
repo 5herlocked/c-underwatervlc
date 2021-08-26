@@ -3,9 +3,10 @@
 #include <Arduino.h>
 
 const int analogPin = A0;
-uint16_t val = 0;
 const int sdSelect = 10;
+const int bufferSize = 16;
 
+uint16_t val = 0;
 unsigned long start_time;
 
 File outputFile;
@@ -39,26 +40,32 @@ void setup() {
 }
 
 void loop() {
-    if (Serial.available() > 0) {
+    if (Serial.available() >= 9) {
         // if incoming signal is 0x01 -> Make new file & Start recording
         // if incoming signal is 0x09 -> Stop recording & Close file
-        byte r = Serial.read();
-        byte name = Serial.read();
-        switch (r) {
-            case 0x01:
-                start_time = micros();
-                outputFile = SD.open("receiver" + name + ".csv", FILE_WRITE);
+        char* inputBuffer = new char[bufferSize];
+        int ingested = Serial.readBytes(inputBuffer, bufferSize);
+
+        switch (inputBuffer[ingested - 1]) {
+            case 0x01: {
+                char* name = new char[8];
+                memcpy(name, inputBuffer, ingested - 2);
+                outputFile = SD.open(name, FILE_WRITE);
                 Serial.write(outputFile.name()); // send back the file name
                 Serial.write(0x01); // ACK
+                start_time = micros();
                 break;
-            case 0x09:
+            }
+            case 0x09: {
                 outputFile.close();
                 Serial.write(outputFile.name()); // send back the file name
                 Serial.write(0x09); //ACK
                 break;
-            default:
+            }
+            default: {
                 //do nothing
                 break;
+            }
         }
     }
 

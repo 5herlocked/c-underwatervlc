@@ -1,6 +1,7 @@
 //
 // Created by sherlock on 12/05/2021.
 //
+#include <serialib.h>
 #include "receiver.h"
 #include "utils.h"
 
@@ -11,8 +12,6 @@
 constexpr char SERIAL_END_CHAR = '\n';
 constexpr int ADC_RESOLUTION = 1023;
 constexpr double ADC_VOLTAGE = 5.00;
-const string ADC_READY_STRING = "Ready";
-const string ADC_CONNECTED_STRING = "Connected";
 
 const vector<CLOption> PROGRAM_OPTIONS = {
         CLOption{
@@ -36,7 +35,7 @@ const vector<CLOption> PROGRAM_OPTIONS = {
         CLOption{
                 "-o",
                 "--output",
-                "Define the file name of the receiver data",
+                "Define the file name of the receiver data. Can only be 8 letters long.",
                 PosArg::OPT_ARG,
         },
         CLOption{
@@ -57,31 +56,26 @@ int main(int argc, char *argv[]) {
     serialib serialDevice;
     int serialErr = serialDevice.openDevice(appConfig.arduinoSource.c_str(), 115200);
 
-    optional<vector<LogEntry>> logs;
+    char *serialInputBuffer = new char[512];
 
-    char *serialInputBuffer = new char[32];
 
     if (serialErr == 1) {
         // Sleeps for 2 seconds to make sure the arduino has time to respond
         preciseSleep(2);
 
-        if (serialDevice.readString(serialInputBuffer, SERIAL_END_CHAR, 32) > 0) {
+        if (serialDevice.readBytes(serialInputBuffer, 512, 32, 0) > 0) {
             // WE HAVE A RESPONSE FROM THE ARDUINO
             // Serial device successfully opened
-            logs = readSerialPort(serialDevice, appConfig);
+            // send a signal to start a new file
+            serialDevice.writeBytes(appConfig.output.value().c_str(), 8);
+            serialDevice.writeBytes(reinterpret_cast<const void *>(0x01), 1);
+
         } else {
             // Response is invalid
 
         }
     } else {
         return serialErrorHandler(serialErr, appConfig);
-    }
-
-    if (logs.has_value()) {
-        printf("Log size: %zu\n", logs->size());
-        writeLogs(logs.value(), appConfig);
-    } else {
-        printf("Logs not generated\n");
     }
 
     // Successfully returns
@@ -121,7 +115,7 @@ vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &confi
 
     auto logs = vector<LogEntry>();
 
-    u_int8_t *serialByteBuffer[1];
+    uint8_t *serialByteBuffer[1];
     printf("Started recording\n");
 
     const auto startTime = high_resolution_clock::now();
@@ -129,7 +123,7 @@ vector<LogEntry> readSerialPort(serialib &serialPort, const Configuration &confi
     while (!exit_app) {
         auto startClock = high_resolution_clock::now();
         serialPort.readBytes(serialByteBuffer, 1, 0, 0);
-        u_int8_t analogVal = *serialByteBuffer[0];
+        uint8_t analogVal = *serialByteBuffer[0];
 
         logs.push_back(
                 LogEntry{
