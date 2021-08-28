@@ -28,6 +28,9 @@ md"This will directly reference videos we want to use and will then use this to 
 # ╔═╡ 53365d23-5fe5-4dba-89b2-0346bddeee7d
 video_url = "C:\\Users\\camv7\\Downloads\\MORSE\\test_set\\25hz_100fps_7ph.avi"
 
+# ╔═╡ ed480a73-e878-4bb3-bea4-dc19960d7762
+video_file = openvideo(video_url)
+
 # ╔═╡ 03922c83-439a-4e56-b4b8-e9a537921d67
 md"Frame Number: $(@bind frame_number NumberField(1:VideoIO.get_number_frames(video_url)))"
 
@@ -37,18 +40,14 @@ md"### Raw interpretation"
 # ╔═╡ 4085d5eb-5efc-44a3-bede-5827625f59dd
 md"### To HSL"
 
+# ╔═╡ 4f5dd718-e775-4fe2-82a1-a4b5929d8d37
+
+
 # ╔═╡ 19ecb730-a7e9-4289-a4f9-e9421b570f39
 md"### To Grayscale"
 
 # ╔═╡ 0bccb699-0223-4eb0-9665-941980b32219
 md"### Helper Functions"
-
-# ╔═╡ ebdebe99-3f77-4c15-8265-f78de79c0a26
-function convertVideo()
-end
-
-# ╔═╡ ed480a73-e878-4bb3-bea4-dc19960d7762
-video_file = convertVideo(openvideo(video_url))
 
 # ╔═╡ 31540f31-0dbf-41f2-9004-3c0a6a6291bb
 function getFrame(frameNum)
@@ -80,6 +79,9 @@ roi = frame[topEdge:bottomEdge, leftEdge:rightEdge]
 # ╔═╡ 106aca3e-0225-4e84-835c-2fb4a08f5e1b
 roi_mean = mean(roi)
 
+# ╔═╡ a4fc4d08-f584-4e83-8d39-62b72d9cda26
+roi_val = repr(roi_mean * 255)
+
 # ╔═╡ 4c2c9e37-871c-4e09-a714-5124e4c5f8a0
 gray_image = Gray.(current_frame)
 
@@ -88,6 +90,9 @@ gray_roi = gray_image[topEdge:bottomEdge, leftEdge:rightEdge]
 
 # ╔═╡ 2bf01fc0-c0ed-4585-9f95-35aee24b6829
 gray_roi_mean = mean(gray_roi)
+
+# ╔═╡ b2113e70-5c1c-46d9-9cca-e9c7bd685e2a
+gray_roi_val = repr(gray_roi_mean * 255)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1353,13 +1358,15 @@ version = "0.9.1+5"
 # ╠═ec6725b9-be67-4f39-bbe2-d520e659eb11
 # ╠═21782bde-5a98-4e10-a9b8-1001ad647c71
 # ╠═106aca3e-0225-4e84-835c-2fb4a08f5e1b
+# ╠═a4fc4d08-f584-4e83-8d39-62b72d9cda26
 # ╟─4085d5eb-5efc-44a3-bede-5827625f59dd
+# ╠═4f5dd718-e775-4fe2-82a1-a4b5929d8d37
 # ╟─19ecb730-a7e9-4289-a4f9-e9421b570f39
 # ╠═4c2c9e37-871c-4e09-a714-5124e4c5f8a0
 # ╠═dcb2f60b-e34b-439e-95d0-3ca5ef85f4a6
 # ╠═2bf01fc0-c0ed-4585-9f95-35aee24b6829
+# ╠═b2113e70-5c1c-46d9-9cca-e9c7bd685e2a
 # ╟─0bccb699-0223-4eb0-9665-941980b32219
 # ╠═31540f31-0dbf-41f2-9004-3c0a6a6291bb
-# ╠═ebdebe99-3f77-4c15-8265-f78de79c0a26
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
