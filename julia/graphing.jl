@@ -19,7 +19,7 @@ begin
 	using LinearAlgebra, ImageFiltering
 	using FileIO, CSV, DSP
 	
-	plotly()
+	gr()
 end
 
 # ╔═╡ ed83e973-2923-4731-af5b-22f7c71bd084
@@ -35,6 +35,9 @@ I'll fetch all kinds of csv's in here and then get their BER's
 # ╔═╡ d9fd2597-a500-41de-afb6-3259fb0fd258
 md"""Testing Mode: $(@bind testingMode CheckBox(default=true))"""
 
+# ╔═╡ 232bceae-3d3a-4da3-aff6-ac0aac552561
+
+
 # ╔═╡ 0ee4088d-f04d-4d6f-9883-f0d175712867
 md"""### Preprosessing the Data"""
 
@@ -47,8 +50,8 @@ md"""Ratio of Transmitter to Receiver: $(@bind ratio NumberField(2:100))"""
 # ╔═╡ aa3e160f-bf62-4ce7-be8a-c5dbba127927
 md"### Using a Gaussian Kernel"
 
-# ╔═╡ 2a4e762b-fb5c-4181-90cf-ab1afa1e976d
-gaussianKernel = Kernel.gaussian((ratio/4, ))
+# ╔═╡ d695c4ea-74de-4acc-bdcf-2ec83fe44059
+
 
 # ╔═╡ a0f36b24-65a7-4834-ad44-5b268ecfade8
 md"## Summary"
@@ -69,16 +72,23 @@ end
 
 # ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 begin
-	transmitter_url = ".\\test-set\\transmitter_25hz_7ph.csv"
+	transmitter_url = ".\\test-set\\transmitter_25hz_2_5g.csv"
 	transmitterFile = CSV.File(transmitter_url)
 	transmitterVector = getVectorFromFile(transmitterFile)
 end
 
 # ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
 begin
-	receiver_url = ".\\test-set\\25hz_100fps_7ph_fix.csv"
+	receiver_url = ".\\test-set\\25hz_100fps_2_5g.csv"
 	receiverFile = CSV.File(receiver_url)
 	receiverVector = getVectorFromFile(receiverFile)
+end
+
+# ╔═╡ fa853a1d-6fb7-4dc4-b0e4-652d66c44d22
+begin
+	receiver_url_fix = ".\\test-set\\25hz_100fps_2_5g_fix.csv"
+	receiverFile_fix = CSV.File(receiver_url_fix)
+	receiverVector_fix = getVectorFromFile(receiverFile_fix)
 end
 
 # ╔═╡ 1188f8b9-e645-4b4b-8b8d-23538120e35d
@@ -118,17 +128,20 @@ transmissionStart = findfirst(transmissionPattern, receiverString)[1]
 # ╔═╡ 7573de12-acf2-43aa-8e7e-42420c72c223
 received_offset = receiverVector[transmissionStart:end]
 
-# ╔═╡ 4d98558c-5023-47c0-94cd-52881fa95347
-convolved = DSP.conv(receiverVector[transmissionStart:end], gaussianKernel)
-
 # ╔═╡ 0b7fb9f8-b70e-4df8-bdfd-26eabcf67b5e
-md"Start point: $(@bind start_point NumberField(-1:size(convolved)[1], default=1))"
+md"Start point: $(@bind start_point NumberField(-1:size(received_offset)[1], default=1))"
 
 # ╔═╡ ac3f0a7a-6c96-4df0-9193-5b61af04e126
-md"Size: $(@bind window NumberField(1:size(convolved)[1], default=ratio*10))"
+md"Size: $(@bind window NumberField(1:size(received_offset)[1], default=ratio*10))"
 
 # ╔═╡ fb972508-11e0-4334-9eed-48f74f27636f
 md"End Point: $(@bind end_point NumberField(1:size(received_offset)[1], default=start_point+window))"
+
+# ╔═╡ 1466cc71-17c6-44d0-a2ed-56674cd3efe9
+received_fix_offset = receiverVector_fix[transmissionStart:end]
+
+# ╔═╡ 3129cb41-f9f0-4c65-8efe-0ba9f0c9c8ae
+bit_location = 1720 + transmissionStart
 
 # ╔═╡ 82857d7d-08c6-4d06-8a1f-4468e479eb43
 function expandVector(vector, ratio)::Vector
@@ -149,12 +162,31 @@ expanded_transmission = expandVector(transmitterVector, ratio)
 # ╔═╡ 3ab6d112-a3bf-4629-b34f-f1e10231b713
 begin
 	x = start_point:end_point
-	y = [received_offset[start_point:end_point] expanded_transmission[start_point:end_point]]
-	plot(x, y, title = "Comparison", label = ["Received" "Transmitted"])
+	y = [expanded_transmission[start_point:end_point] received_fix_offset[start_point:end_point]]
+	plot(x, y, title = "Comparison", label = ["Transmitted" "Fixed"])
 end
 
-# ╔═╡ dd814a09-12a4-4b90-b2b6-1aff36c6c489
+# ╔═╡ d4d5ce62-da86-4b90-9aba-9b6e4313f830
+function getBER(sent, received, ratio)::Float64
+	success = 0
+	for b in sent
+		iSucc = 0
+		for i in 1:ratio
+			if received[i] == b
+				iSucc += 1
+			end
+		end
+		
+		if iSucc >= ratio/2
+			success += 1
+		end
+	end
+	
+	return success/size(sent)[1] * 100
+end
 
+# ╔═╡ 45c2f630-83fb-44f8-8330-4334541eb246
+ber = getBER(transmitterVector, received_offset, ratio)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1216,6 +1248,7 @@ version = "0.9.1+5"
 # ╠═d9fd2597-a500-41de-afb6-3259fb0fd258
 # ╠═a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 # ╠═15747c5d-1b10-4b25-ba6f-2de9336c2087
+# ╟─232bceae-3d3a-4da3-aff6-ac0aac552561
 # ╟─0ee4088d-f04d-4d6f-9883-f0d175712867
 # ╟─4ae48d1e-d0f1-4d3a-a457-83c108aa4d17
 # ╟─76b61b23-97f8-4ceb-a18e-2c2a7396a7d5
@@ -1225,18 +1258,21 @@ version = "0.9.1+5"
 # ╟─aa3e160f-bf62-4ce7-be8a-c5dbba127927
 # ╟─96fda257-21e1-49db-8287-c6d978d4b6d0
 # ╟─7573de12-acf2-43aa-8e7e-42420c72c223
-# ╠═2a4e762b-fb5c-4181-90cf-ab1afa1e976d
-# ╠═4d98558c-5023-47c0-94cd-52881fa95347
+# ╠═fa853a1d-6fb7-4dc4-b0e4-652d66c44d22
+# ╟─1466cc71-17c6-44d0-a2ed-56674cd3efe9
 # ╠═0b7fb9f8-b70e-4df8-bdfd-26eabcf67b5e
 # ╠═ac3f0a7a-6c96-4df0-9193-5b61af04e126
 # ╠═fb972508-11e0-4334-9eed-48f74f27636f
 # ╠═3ab6d112-a3bf-4629-b34f-f1e10231b713
+# ╠═3129cb41-f9f0-4c65-8efe-0ba9f0c9c8ae
+# ╠═45c2f630-83fb-44f8-8330-4334541eb246
+# ╠═d695c4ea-74de-4acc-bdcf-2ec83fe44059
 # ╟─a0f36b24-65a7-4834-ad44-5b268ecfade8
 # ╟─9b5d9f6b-e0ec-4aa0-b310-af522e14252a
 # ╟─3cb738b5-f4c3-46a8-abeb-321dd3faebf3
-# ╠═1188f8b9-e645-4b4b-8b8d-23538120e35d
-# ╠═2bfa4263-3b0b-4849-b453-a39f2545a88c
-# ╠═82857d7d-08c6-4d06-8a1f-4468e479eb43
-# ╠═dd814a09-12a4-4b90-b2b6-1aff36c6c489
+# ╟─1188f8b9-e645-4b4b-8b8d-23538120e35d
+# ╟─2bfa4263-3b0b-4849-b453-a39f2545a88c
+# ╟─82857d7d-08c6-4d06-8a1f-4468e479eb43
+# ╟─d4d5ce62-da86-4b90-9aba-9b6e4313f830
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
