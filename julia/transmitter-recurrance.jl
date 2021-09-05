@@ -17,7 +17,7 @@ end
 begin
 	window = 20
 	num_bit_offset = 300
-	start_point = 95
+	start_point = 1
 	end_point = start_point + window
 	repeat_one = start_point + num_bit_offset
 	repeat_one_end = repeat_one + window
@@ -39,7 +39,7 @@ end
 
 # ╔═╡ 27b1db19-3a10-4d26-aa78-908bb7a56767
 begin
-	transmitter_url = "C:\\Users\\camv7\\Downloads\\MORSE\\stuff req for ber\\ph_var\\ph_10\\transmitter_1Hz_1_cycles-300_bits_data.csv"
+	transmitter_url = "C:\\Users\\camv7\\Downloads\\MORSE\\stuff req for ber\\ph_var\\ph_10\\transmitter_50Hz_50_cycles-300_bits_data.csv"
 	transmitter_file = CSV.File(transmitter_url)
 	transmitter_vec = getVectorFromFile(transmitter_file)
 end
