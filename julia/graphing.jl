@@ -68,21 +68,21 @@ end
 
 # ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 begin
-	transmitter_url = ".\\test-set\\transmitter_25hz_28c.csv"
+	transmitter_url = ".\\test-set\\transmitter_50hz_28c.csv"
 	transmitterFile = CSV.File(transmitter_url)
 	transmitterVector = getVectorFromFile(transmitterFile)
 end
 
 # ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
 begin
-	receiver_url = ".\\test-set\\25hz_100fps_28c.csv"
+	receiver_url = ".\\test-set\\50hz_100fps_28c.csv"
 	receiverFile = CSV.File(receiver_url)
 	receiverVector = getVectorFromFile(receiverFile)
 end
 
 # ╔═╡ fa853a1d-6fb7-4dc4-b0e4-652d66c44d22
 begin
-	receiver_url_fix = ".\\test-set\\25hz_100fps_28c_fix.csv"
+	receiver_url_fix = ".\\test-set\\50hz_100fps_28c_fix.csv"
 	receiverFile_fix = CSV.File(receiver_url_fix)
 	receiverVector_fix = getVectorFromFile(receiverFile_fix)
 end
@@ -191,7 +191,7 @@ function getBER(sent, received, ratio)::Float64
 end
 
 # ╔═╡ 45c2f630-83fb-44f8-8330-4334541eb246
-ber = getBER(transmitterVector[1:1525], received_fix_offset[1:6100], ratio)
+ber = getBER(transmitterVector[1:Int(round(start_point/ratio))], received_fix_offset[1:start_point], ratio)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1070,9 +1070,9 @@ version = "0.9.1+5"
 # ╟─0b7fb9f8-b70e-4df8-bdfd-26eabcf67b5e
 # ╟─ac3f0a7a-6c96-4df0-9193-5b61af04e126
 # ╟─fb972508-11e0-4334-9eed-48f74f27636f
+# ╟─3129cb41-f9f0-4c65-8efe-0ba9f0c9c8ae
 # ╟─30cd5272-2645-4b24-a93b-5e176e40827c
 # ╟─3ab6d112-a3bf-4629-b34f-f1e10231b713
-# ╠═3129cb41-f9f0-4c65-8efe-0ba9f0c9c8ae
 # ╠═45c2f630-83fb-44f8-8330-4334541eb246
 # ╠═d695c4ea-74de-4acc-bdcf-2ec83fe44059
 # ╟─a0f36b24-65a7-4834-ad44-5b268ecfade8
@@ -1081,6 +1081,6 @@ version = "0.9.1+5"
 # ╟─1188f8b9-e645-4b4b-8b8d-23538120e35d
 # ╟─2bfa4263-3b0b-4849-b453-a39f2545a88c
 # ╟─82857d7d-08c6-4d06-8a1f-4468e479eb43
-# ╠═d4d5ce62-da86-4b90-9aba-9b6e4313f830
+# ╟─d4d5ce62-da86-4b90-9aba-9b6e4313f830
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
