@@ -7,7 +7,8 @@ realtime operating system much like Jetpack.
 ## Guide to the code
 
 The code is split into individual folders to make code managing simpler and compiling more modular without
-using overly complex CMake projects.
+using overly complex CMake projects. Most of this library is built with **standard C++17** code except for
+certain situations where `unistd.h` is required. It will be explicitly mentioned in the respective README files.  
 
 * Analysis Tool - Ingests video files in the form of *.avi and prompts the user for an ROI then calculates the 
 scalar mean of RGB values over that region. If passed a full dataset, the tool also uses the ground truth videos
@@ -32,6 +33,8 @@ and the ZED SDK on the host system to open the SVO file and export into either v
 For more information, refer to [this](svo_export/README.md)
 
 * Transmitter - Takes control of a GPIO pin using the linux kernel character GPIO library. It's built for Edge devices
-with the libgpiod library installed. 
+with the libgpiod library installed. Currently, it is entirely hardware bound (up to 25KHz) but can run into speed and
+inconsistency issues when memory utilization exceeds RAM capacity. For more information, refer to [this](transmitter/README.md)
 
-* Zed Record -
+* Zed Record - Records videos from an attached ZED camera with commandline parameters of resolution, framerate, name.
+For more information, refer to [this](zed_record/README.md)
