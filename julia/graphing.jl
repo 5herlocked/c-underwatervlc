@@ -21,11 +21,6 @@ begin
 	gr()
 end
 
-# ╔═╡ ed83e973-2923-4731-af5b-22f7c71bd084
-md"""
-Attempting to devise a method to use Convolution to improve our BER generation tools for MORSELab
-"""
-
 # ╔═╡ 73ffab87-a686-4df5-939b-84fe60b959bd
 md"""
 I'll fetch all kinds of csv's in here and then get their BER's
@@ -1051,7 +1046,6 @@ version = "0.9.1+5"
 
 # ╔═╡ Cell order:
 # ╠═7df5bb30-f0c2-11eb-27c1-5fb91b62858a
-# ╟─ed83e973-2923-4731-af5b-22f7c71bd084
 # ╟─73ffab87-a686-4df5-939b-84fe60b959bd
 # ╠═d9fd2597-a500-41de-afb6-3259fb0fd258
 # ╠═a40b47e5-aca0-4088-ba49-7899ae0a4ef4
