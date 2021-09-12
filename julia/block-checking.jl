@@ -95,7 +95,7 @@ end
 
 # ╔═╡ 3da9ea6a-d89b-49a6-83cc-132a376a0f00
 begin
-	transmitter_url = ".\\test-set\\transmitter_25Hz_40c.csv"
+	transmitter_url = ".\\test-set\\transmitter_25Hz_7ph.csv"
 	transmitter_file = CSV.File(transmitter_url)
 	transmitter_vec = getVectorFromFile(transmitter_file)
 end
@@ -103,12 +103,9 @@ end
 # ╔═╡ 344f30b1-efae-4286-8d95-665d65a0d6cb
 md"""Starting point: $(@bind start_point NumberField(1:size(transmitter_vec)[1]-ratio; default=1))"""
 
-# ╔═╡ f602abe8-db66-46c0-b5d4-42faa2b872aa
-transmitter_slice = transmitter_vec[start_point:start_point+window_size]
-
 # ╔═╡ 83219521-6ee7-40b5-abd5-057ca98491fa
 begin
-	receiver_url = ".\\test-set\\25hz_100fps_40c.csv"
+	receiver_url = ".\\test-set\\25hz_100fps_7ph_fix.csv"
 	receiver_file = CSV.File(receiver_url)
 	receiver_vec = getVectorFromFile(receiver_file)
 end
@@ -117,13 +114,53 @@ end
 transmission_start = findfirst(getTransmitterPattern(transmitter_vec), getReceiverString(receiver_vec))[1]
 
 # ╔═╡ cd9c5c29-407c-4349-a1d5-45616936bfcf
-rec_temp_start = transmission_start + ((start_point - 1) * ratio)
+begin
+	rec_temp_start = transmission_start + ((start_point - 1) * ratio)
+	
+	if start_point == 1
+		tran_temp_start = 1
+	else
+		tran_temp_start = (start_point - 1) * ratio
+	end
+	md"""
+	receiver start: $(rec_temp_start)
+	
+	transmitter start: $(tran_temp_start)
+	"""
+end
 
 # ╔═╡ 59a7d05b-e988-4ff2-93d5-8155e92bb2b9
-rec_temp_end = rec_temp_start + ((size(transmitter_slice)[1]) * ratio) - 1
+begin
+	rec_temp_end = rec_temp_start + (window_size * ratio) - 1
+	tran_temp_end = tran_temp_start + (window_size * ratio) - 1
+	md"""
+	receiver start: $(rec_temp_end)
+	
+	transmitter start: $(tran_temp_end)
+	"""
+end
 
 # ╔═╡ 0f3ef489-767c-425d-870d-15c0a06ab3c0
 receiver_slice = receiver_vec[rec_temp_start:rec_temp_end]
+
+# ╔═╡ bd80d84c-8d73-477c-be0a-6a1d14d441d2
+function expandVector(vector, ratio)::Vector
+	new_vec = Vector{Int16}()
+	
+	for i in vector
+		for j in range(1, ratio; step=1)
+			append!(new_vec, i)
+		end
+	end
+	
+	return new_vec
+end
+
+# ╔═╡ 73b3a6a7-781f-4648-bfbd-1dc3f790f15b
+expanded_transmitter = expandVector(transmitter_vec, ratio)
+
+# ╔═╡ f602abe8-db66-46c0-b5d4-42faa2b872aa
+transmitter_slice = expanded_transmitter[tran_temp_start:tran_temp_end]
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -276,9 +313,10 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 # ╠═7ca8cc67-7da5-4a97-a2e2-ebb1314a999a
 # ╠═344f30b1-efae-4286-8d95-665d65a0d6cb
 # ╟─82368edb-f787-4e74-9c42-baca1198b800
-# ╠═f602abe8-db66-46c0-b5d4-42faa2b872aa
-# ╠═cd9c5c29-407c-4349-a1d5-45616936bfcf
-# ╠═59a7d05b-e988-4ff2-93d5-8155e92bb2b9
+# ╠═73b3a6a7-781f-4648-bfbd-1dc3f790f15b
+# ╟─cd9c5c29-407c-4349-a1d5-45616936bfcf
+# ╟─59a7d05b-e988-4ff2-93d5-8155e92bb2b9
+# ╟─f602abe8-db66-46c0-b5d4-42faa2b872aa
 # ╠═0f3ef489-767c-425d-870d-15c0a06ab3c0
 # ╟─9deb7f76-be16-4030-92bc-b7c6cde58fc1
 # ╟─2131a8a4-b0c0-49e5-ac7f-0e9977e39366
@@ -286,5 +324,6 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 # ╟─f2a8a94b-4b39-48be-93c4-fa7661d03014
 # ╟─1f993f0e-eb44-4bf6-91b7-971bb133974c
 # ╟─5506f3db-89f0-40d6-a521-8f7818f866fc
+# ╟─bd80d84c-8d73-477c-be0a-6a1d14d441d2
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
