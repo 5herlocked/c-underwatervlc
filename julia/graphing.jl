@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.15.1
+# v0.16.0
 
 using Markdown
 using InteractiveUtils
@@ -63,21 +63,21 @@ end
 
 # ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 begin
-	transmitter_url = ".\\test-set\\transmitter_50hz_28c.csv"
+	transmitter_url = ".\\test-set\\transmitter_50hz_40c.csv"
 	transmitterFile = CSV.File(transmitter_url)
 	transmitterVector = getVectorFromFile(transmitterFile)
 end
 
 # ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
 begin
-	receiver_url = ".\\test-set\\50hz_100fps_28c.csv"
+	receiver_url = ".\\test-set\\50hz_100fps_40c.csv"
 	receiverFile = CSV.File(receiver_url)
 	receiverVector = getVectorFromFile(receiverFile)
 end
 
 # ╔═╡ fa853a1d-6fb7-4dc4-b0e4-652d66c44d22
 begin
-	receiver_url_fix = ".\\test-set\\50hz_100fps_28c_fix.csv"
+	receiver_url_fix = ".\\test-set\\50hz_100fps_40c_fix.csv"
 	receiverFile_fix = CSV.File(receiver_url_fix)
 	receiverVector_fix = getVectorFromFile(receiverFile_fix)
 end
@@ -123,7 +123,7 @@ received_offset = receiverVector[transmissionStart:end]
 md"Start point: $(@bind start_point NumberField(1:size(received_offset)[1], default=1))"
 
 # ╔═╡ ac3f0a7a-6c96-4df0-9193-5b61af04e126
-md"Size: $(@bind window NumberField(1:size(received_offset)[1], default=ratio*10))"
+md"Size: $(@bind window NumberField(1:size(received_offset)[1], default=ratio*20))"
 
 # ╔═╡ fb972508-11e0-4334-9eed-48f74f27636f
 md"End Point: $(@bind end_point NumberField(1:size(received_offset)[1], default=start_point+window))"
