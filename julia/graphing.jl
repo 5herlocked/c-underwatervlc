@@ -63,21 +63,21 @@ end
 
 # ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 begin
-	transmitter_url = ".\\test-set\\transmitter_50hz_40c.csv"
+	transmitter_url = ".\\test-set\\transmitter_25hz_43c.csv"
 	transmitterFile = CSV.File(transmitter_url)
 	transmitterVector = getVectorFromFile(transmitterFile)
 end
 
 # ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
 begin
-	receiver_url = ".\\test-set\\50hz_100fps_40c.csv"
+	receiver_url = ".\\test-set\\25hz_100fps_43c.csv"
 	receiverFile = CSV.File(receiver_url)
 	receiverVector = getVectorFromFile(receiverFile)
 end
 
 # ╔═╡ fa853a1d-6fb7-4dc4-b0e4-652d66c44d22
 begin
-	receiver_url_fix = ".\\test-set\\50hz_100fps_40c_fix.csv"
+	receiver_url_fix = ".\\test-set\\25hz_100fps_43c_fix.csv"
 	receiverFile_fix = CSV.File(receiver_url_fix)
 	receiverVector_fix = getVectorFromFile(receiverFile_fix)
 end
