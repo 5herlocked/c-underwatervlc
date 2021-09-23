@@ -7,10 +7,44 @@
  * It only relies on system libraries available on an nVidia Jetson Nano Developer Kit
  */
 
+#include "unistd.h"
 #include "getopt.h"
 #include "gpiod.h"
 #include "utils.h"
 #include "transmitter.h"
+
+// Function declarations
+void parseArgs(int argc, char **argv, Configuration &config);
+
+// These accept a reference to a pointer
+void instantiateGPIO(gpiod_chip *&chip, gpiod_line *&pin);
+
+void gpioCleanUp(gpiod_chip *&pChip, gpiod_line *&pLine);
+
+void setState(const Configuration &config);
+
+optional<vector<LogEntry>> transmit(const Configuration &config, const vector<int> &transmission);
+
+optional<vector<LogEntry>> transmitMessage(const Configuration& config, const char message[]);
+
+void preciseSleep(double seconds);
+
+void generateCSV(const vector<LogEntry>& logs, const Configuration &appConfig);
+
+void showUsage();
+
+void signalHandler(int signal);
+
+optional<double> getFrequency(long frequency);
+
+vector<int> generateRandomTransmission(const int &value);
+
+optional<GPIO> toGPIO(const string &input);
+
+// Test functions
+[[maybe_unused]] Configuration getTestConfiguration();
+
+[[maybe_unused]] vector<int> generateBitFlips(int size);
 
 // Runner
 int main(int argc, char *argv[]) {
@@ -28,6 +62,9 @@ int main(int argc, char *argv[]) {
             case STATE:
                 setState(appConfig);
                 break;
+            case MESSAGE:
+                logs = transmitMessage(appConfig, appConfig.message.value());
+                break;
             case TEST:
                 appConfig = getTestConfiguration();
                 logs = transmit(appConfig, generateBitFlips(appConfig.bits.value()));
@@ -39,10 +76,10 @@ int main(int argc, char *argv[]) {
         showUsage();
     }
 
-    if (logs.has_value() && appConfig.type.value() != APP_TYPE::TEST) {
+    if (logs.has_value() && appConfig.type.value() != AppType::TEST) {
         // Logs successfully generated
         generateCSV(logs.value(), appConfig);
-    } else if (appConfig.type.value() == APP_TYPE::TEST) {
+    } else if (appConfig.type.value() == AppType::TEST) {
         printf("Test Complete\n");
     } else {
         // Logs failed to generate
@@ -59,8 +96,9 @@ void parseArgs(int argc, char **argv, Configuration &config) {
     int opt;
     struct option long_options[] = {
             {"help",      no_argument,       nullptr, 'h'},
-            {"state",     required_argument, nullptr, 's'},
+            {"state",     optional_argument, nullptr, 's'},
             {"random",    optional_argument, nullptr, 'r'},
+            {"message",   optional_argument, nullptr, 'm'},
             {"frequency", required_argument, nullptr, 'f'},
             {"cycles",    required_argument, nullptr, 'c'},
             {"output",    optional_argument, nullptr, 'o'},
@@ -68,7 +106,7 @@ void parseArgs(int argc, char **argv, Configuration &config) {
             {nullptr,     no_argument,       nullptr, 0}
     };
     int optionIdx = 0;
-    while ((opt = getopt_long(argc, argv, "hs:r:f:c:t", long_options, &optionIdx)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hs:r:m:f:c:t", long_options, &optionIdx)) != -1) {
         switch (opt) {
             case 0:
                 //TODO: No arguments, default config
@@ -77,20 +115,28 @@ void parseArgs(int argc, char **argv, Configuration &config) {
                 showUsage();
                 exit(0);
             case 's':
-                if (config.type.has_value() && config.type.value() == APP_TYPE::RANDOM) {
+                if (config.type.has_value() && config.type.value() == AppType::RANDOM) {
                     cout << "The state flag takes precedence. Using the given state: " << optarg << endl;
                 }
 
-                config.type = APP_TYPE::STATE;
+                config.type = AppType::STATE;
                 config.state = toGPIO(optarg);
                 break;
             case 'r':
-                if (config.type.has_value() && config.type.value() == APP_TYPE::STATE) {
+                if (config.type.has_value() && config.type.value() == AppType::STATE) {
                     cout << "The state flag takes precedence. Ignoring the random bits flag" << endl;
                     break;
                 }
-                config.type = APP_TYPE::RANDOM;
+                config.type = AppType::RANDOM;
                 config.bits = strtol(optarg, nullptr, 10);
+                break;
+            case 'm':
+                if (config.type.has_value()) {
+                    printf("The message flag has the lowest precedence. Please choose only one type flag.\n");
+                    break;
+                }
+                config.type = AppType::MESSAGE;
+                config.message = optarg;
                 break;
             case 'f':
                 config.frequency = getFrequency(strtol(optarg, nullptr, 10));
@@ -230,6 +276,21 @@ optional<vector<LogEntry>> transmit(const Configuration &config, const vector<in
     return logs;
 }
 
+optional<vector<LogEntry>> transmitMessage(const Configuration& config, const char message[]) {
+    auto logs = vector<LogEntry>();
+
+    struct gpiod_chip *chip = nullptr;
+    struct gpiod_line *pin = nullptr;
+
+    instantiateGPIO(chip, pin);
+
+    gpiod_line_request_output(pin, "transmitter_out", 0);
+
+    const double frequency = config.frequency.value();
+    int transmitted = 0, failed = 0;
+    const auto t_0 = chrono::high_resolution_clock::now();
+}
+
 /*
  * Uses a combination of thread_sleep (longer time intervals)
  * and spinlocks to get as accurate of a sleep time as we can get without overloading the CPU
@@ -336,7 +397,7 @@ optional<GPIO> toGPIO(const string &input) {
 [[maybe_unused]] Configuration getTestConfiguration() {
     Configuration testConfig{};
 
-    testConfig.type = APP_TYPE::RANDOM;
+    testConfig.type = AppType::RANDOM;
     testConfig.frequency = getFrequency(25'000);
     testConfig.bits = 100'000;
     testConfig.cycles = 1;
