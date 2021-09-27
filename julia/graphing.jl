@@ -63,21 +63,21 @@ end
 
 # ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 begin
-	transmitter_url = ".\\test-set\\transmitter_25hz_43c.csv"
+	transmitter_url = "E:\\MORSE datasets\\turbid_var\\10g\\transmitter_50Hz_10g.csv"
 	transmitterFile = CSV.File(transmitter_url)
 	transmitterVector = getVectorFromFile(transmitterFile)
 end
 
 # ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
 begin
-	receiver_url = ".\\test-set\\25hz_100fps_43c.csv"
+	receiver_url = "E:\\MORSE datasets\\turbid_var\\10g\\10g_50hz_100fps_wvga.csv"
 	receiverFile = CSV.File(receiver_url)
 	receiverVector = getVectorFromFile(receiverFile)
 end
 
 # ╔═╡ fa853a1d-6fb7-4dc4-b0e4-652d66c44d22
 begin
-	receiver_url_fix = ".\\test-set\\25hz_100fps_43c_fix.csv"
+	receiver_url_fix = "E:\\MORSE datasets\\turbid_var\\10g\\10g_50hz_100fps_wvga_fix.csv"
 	receiverFile_fix = CSV.File(receiver_url_fix)
 	receiverVector_fix = getVectorFromFile(receiverFile_fix)
 end
@@ -103,8 +103,8 @@ transmissionPattern = getTransmitterPattern(transmitterVector)
 function getReceiverString(receiverVector::Vector{Int16})::String
 	receiver = ""
 	
-	for i in range(1, ratio * precision * 10; step=1)
-		receiver *= string(receiverVector[i])
+	for i in receiverVector
+		receiver *= string(i)
 	end
 	
 	return receiver
@@ -1055,8 +1055,8 @@ version = "0.9.1+5"
 # ╟─4ae48d1e-d0f1-4d3a-a457-83c108aa4d17
 # ╟─76b61b23-97f8-4ceb-a18e-2c2a7396a7d5
 # ╟─ab21165f-3e1f-4d49-b4b8-aa39786951cc
-# ╟─bc4f5957-48cc-41eb-8c8d-e0e25ad19637
-# ╟─47e2d884-24e4-4081-ba49-7fead3f430d4
+# ╠═bc4f5957-48cc-41eb-8c8d-e0e25ad19637
+# ╠═47e2d884-24e4-4081-ba49-7fead3f430d4
 # ╟─96fda257-21e1-49db-8287-c6d978d4b6d0
 # ╟─7573de12-acf2-43aa-8e7e-42420c72c223
 # ╠═fa853a1d-6fb7-4dc4-b0e4-652d66c44d22
