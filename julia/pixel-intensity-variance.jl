@@ -3,8 +3,20 @@ gr()
 
 # load all the available data
 begin
-    data_location = String(pwd()) * "\\test-set\\"
+    data_location = "E:\\csvs\\"
     available_files = readdir(data_location)
+end
+
+function plotandExport(df, title, fn)
+    temp = boxplot(
+        title=title,
+        label=["Blue" "Red" "Green"],
+        ["Blue" "Red" "Green"],
+        [df.blue df.red df.green],
+        ylims = (0, 255)
+    )
+
+    savefig(temp, pwd()*"\\export\\"*fn*".svg")
 end
 
 begin
@@ -17,8 +29,12 @@ begin
         temp_list_off = temp_dF |> @filter(_.bit == 0) |> DataFrame
         temp_list_on = temp_dF |> @filter(_.bit == 1) |> DataFrame
 
-        plotandExport(temp_list_off, title*"OFF", title*"OFF")
-        plotandExport(temp_list_on, title*"ON", title*"ON")
+        if (size(temp_list_off)[1] > 0)
+            plotandExport(temp_list_off, title*"OFF", title*"OFF")
+        end
+        if (size(temp_list_on)[1] > 0)
+            plotandExport(temp_list_on, title*"ON", title*"ON")
+        end
     end
 end
 
@@ -36,8 +52,12 @@ begin
         temp_list_off = temp_dF |> @filter(_.bit == 0) |> DataFrame
         temp_list_on = temp_dF |> @filter(_.bit == 1) |> DataFrame
 
-        plotandExport(temp_list_off, title*"OFF", title*"OFF")
-        plotandExport(temp_list_on, title*"ON", title*"ON")
+        if (size(temp_list_off)[1] > 0)
+            plotandExport(temp_list_off, title*"OFF", title*"OFF")
+        end
+        if (size(temp_list_on)[1] > 0)
+            plotandExport(temp_list_on, title*"ON", title*"ON")
+        end
     end
 end
 
@@ -51,8 +71,12 @@ begin
         temp_list_off = temp_dF |> @filter(_.bit == 0) |> DataFrame
         temp_list_on = temp_dF |> @filter(_.bit == 1) |> DataFrame
 
-        plotandExport(temp_list_off, title*"OFF", title*"OFF")
-        plotandExport(temp_list_on, title*"ON", title*"ON")
+        if (size(temp_list_off)[1] > 0)
+            plotandExport(temp_list_off, title*"OFF", title*"OFF")
+        end
+        if (size(temp_list_on)[1] > 0)
+            plotandExport(temp_list_on, title*"ON", title*"ON")
+        end
     end
 end
 
@@ -66,19 +90,11 @@ begin
         temp_list_off = temp_dF |> @filter(_.bit == 0) |> DataFrame
         temp_list_on = temp_dF |> @filter(_.bit == 1) |> DataFrame
 
-        plotandExport(temp_list_off, title*"OFF", title*"OFF")
-        plotandExport(temp_list_on, title*"ON", title*"ON")
+        if (size(temp_list_off)[1] > 0)
+            plotandExport(temp_list_off, title*"OFF", title*"OFF")
+        end
+        if (size(temp_list_on)[1] > 0)
+            plotandExport(temp_list_on, title*"ON", title*"ON")
+        end
     end
-end
-
-function plotandExport(df, title, fn)
-    temp = boxplot(
-        title=title,
-        label=["Blue" "Red" "Green"],
-        ["Blue" "Red" "Green"],
-        [df.blue df.red df.green],
-        ylims = (0, 255)
-    )
-
-    savefig(temp, pwd()*"\\export\\"*fn*".svg")
 end

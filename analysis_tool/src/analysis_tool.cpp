@@ -246,6 +246,7 @@ void analyseDataset(Configuration &configuration, const fs::path &ledON, const f
     tempConfig.location = ledON.string();
     tempConfig.genericOutput = replaceExtension(ledON);
     auto scalarAverages = analyseVideo(tempConfig);
+    createCSV(scalarAverages.value(), ledON.filename().replace_extension().string());
     // extract scalar averages from the logs
     for_each(scalarAverages.value().cbegin(), scalarAverages.value().cend(), getScalar);
     auto ledONAverage = getScalarAverage(scalarEntries);
@@ -256,6 +257,7 @@ void analyseDataset(Configuration &configuration, const fs::path &ledON, const f
     tempConfig.location = ledOFF.string();
     tempConfig.genericOutput = replaceExtension(ledOFF);
     scalarAverages = analyseVideo(tempConfig);
+    createCSV(scalarAverages.value(), ledOFF.filename().replace_extension().string());
     // extract the scalar averages from the logs
     for_each(scalarAverages.value().cbegin(), scalarAverages.value().cend(), getScalar);
     auto ledOFFAverage = getScalarAverage(scalarEntries);
