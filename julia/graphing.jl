@@ -63,14 +63,14 @@ end
 
 # ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 begin
-	transmitter_url = ".\\test-set\\transmitter_25hz_43c.csv"
+	transmitter_url = ".\\test-set\\transmitter\\transmitter_25hz_28c.csv"
 	transmitterFile = CSV.File(transmitter_url)
 	transmitterVector = getVectorFromFile(transmitterFile)
 end
 
 # ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
 begin
-	receiver_url = ".\\test-set\\25hz_100fps_43c.csv"
+	receiver_url = ".\\test-set\\25hz_100fps_28c.csv"
 	receiverFile = CSV.File(receiver_url)
 	receiverVector = getVectorFromFile(receiverFile)
 end
@@ -154,7 +154,7 @@ expanded_transmission = expandVector(transmitterVector, ratio)
 begin
 	dup_x = start_point:end_point
 	dup_y = [expanded_transmission[start_point:end_point] received_offset[start_point:end_point]]
-	plot(dup_x, dup_y, title = "Comparison", label = ["Transmitted" "Received"])
+	plot(dup_x, dup_y, markershape=:circle, linestyle=:dash, title = "Comparison", label = ["Transmitted" "Received"])
 end
 
 # ╔═╡ 3ab6d112-a3bf-4629-b34f-f1e10231b713
@@ -1065,7 +1065,7 @@ version = "0.9.1+5"
 # ╟─ac3f0a7a-6c96-4df0-9193-5b61af04e126
 # ╟─fb972508-11e0-4334-9eed-48f74f27636f
 # ╟─3129cb41-f9f0-4c65-8efe-0ba9f0c9c8ae
-# ╟─30cd5272-2645-4b24-a93b-5e176e40827c
+# ╠═30cd5272-2645-4b24-a93b-5e176e40827c
 # ╟─3ab6d112-a3bf-4629-b34f-f1e10231b713
 # ╠═45c2f630-83fb-44f8-8330-4334541eb246
 # ╠═d695c4ea-74de-4acc-bdcf-2ec83fe44059
