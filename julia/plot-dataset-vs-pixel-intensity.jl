@@ -35,15 +35,14 @@ begin
     
     p = boxplot(
         ["28c" "31c" "34c" "37c" "40c" "43c"],
-        [dF."28c" dF."31c" dF."34c" dF."37c" dF."40c" dF."43c"],        
-        title="Temp. vs. Blue Channel (ON - OFF)",
+        [dF."28c" dF."31c" dF."34c" dF."37c" dF."40c" dF."43c"],
         ylims=(0, 255),
         labels=false,
         xlabel="Temperature",
         ylabel="Pixel Intensity (0-255)"
     )
 
-    savefig(p, "Temp-v-pixel-int.svg")
+    savefig(p, "temp-v-pixel-int.png")
 end
 
 begin
@@ -76,15 +75,14 @@ begin
     
     p = boxplot(
         ["5ph" "5.5ph" "6ph" "6.5ph" "7ph" "7.5ph" "8ph" "8.5ph" "9ph" "10ph"],
-        [dF."5ph" dF."55ph" dF."6ph" dF."65ph" dF."7ph" dF."75ph" dF."8ph" dF."85ph" dF."9ph" dF."10ph"],        
-        title="pH vs. Blue Channel (ON - OFF)",
+        [dF."5ph" dF."55ph" dF."6ph" dF."65ph" dF."7ph" dF."75ph" dF."8ph" dF."85ph" dF."9ph" dF."10ph"],
         ylims=(0, 255),
         xlabel="pH",
         labels=false,
         ylabel="Pixel Intensity (0-255)"
     )
 
-    savefig(p, "pH-v-pixel-int.svg")
+    savefig(p, "pH-v-pixel-int.png")
 end
 
 begin
@@ -118,14 +116,13 @@ begin
     p = boxplot(
         ["500ppm" "1500ppm" "5ppt" "7ppt" "15ppt" "20ppt" "35ppt"],
         [dF."500ppm" dF."1500ppm" dF."5000ppm" dF."7ppt" dF."15ppt" dF."20ppt" dF."35ppt"],
-        title="Salinity vs. Blue Channel (ON - OFF)",
         ylims=(0, 255),
-        xlabel="pH",
+        xlabel="Salinity",
         labels=false,
         ylabel="Pixel Intensity (0-255)"
     )
 
-    savefig(p, "salinity-v-pixel-int.svg")
+    savefig(p, "salinity-v-pixel-int.png")
 end
 
 begin
@@ -155,16 +152,15 @@ begin
 
         insertcols!(dF, 1, dataset_specifier[1] => led_val_diff[1:10000])
     end
-    
+
     p = boxplot(
         ["0g" "2.5g" "5g" "7.5g" "10g" "12.5g" "15g" "30g"],
         [dF."0g" dF."25g" dF."5g" dF."75g" dF."10g" dF."125g" dF."15g" dF."30g"],
-        title="Turbidity vs. Blue Channel (ON - OFF)",
         ylims=(0, 255),
-        xlabel="pH",
+        xlabel="Turbidity",
         labels=false,
         ylabel="Pixel Intensity (0-255)"
     )
 
-    savefig(p, "turbid-v-pixel-int.svg")
+    savefig(p, "turbid-v-pixel-int.png")
 end

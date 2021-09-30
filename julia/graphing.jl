@@ -41,9 +41,6 @@ md"""Number of tracking bits: $(@bind precision NumberField(3:20; default=5))"""
 # ╔═╡ 76b61b23-97f8-4ceb-a18e-2c2a7396a7d5
 md"""Ratio of Transmitter to Receiver: $(@bind ratio NumberField(2:100))"""
 
-# ╔═╡ d695c4ea-74de-4acc-bdcf-2ec83fe44059
-
-
 # ╔═╡ a0f36b24-65a7-4834-ad44-5b268ecfade8
 md"## Summary"
 
@@ -63,21 +60,21 @@ end
 
 # ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 begin
-	transmitter_url = ".\\test-set\\transmitter\\transmitter_25hz_28c.csv"
+	transmitter_url = "E:\\csvs\\transmitter_25Hz_7ph.csv"
 	transmitterFile = CSV.File(transmitter_url)
 	transmitterVector = getVectorFromFile(transmitterFile)
 end
 
 # ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
 begin
-	receiver_url = ".\\test-set\\25hz_100fps_28c.csv"
+	receiver_url = "E:\\csvs\\25hz_100fps_7ph.csv"
 	receiverFile = CSV.File(receiver_url)
 	receiverVector = getVectorFromFile(receiverFile)
 end
 
 # ╔═╡ fa853a1d-6fb7-4dc4-b0e4-652d66c44d22
 begin
-	receiver_url_fix = ".\\test-set\\25hz_100fps_43c_fix.csv"
+	receiver_url_fix = ".\\test-set\\25hz_100fps_2_5g_fix.csv"
 	receiverFile_fix = CSV.File(receiver_url_fix)
 	receiverVector_fix = getVectorFromFile(receiverFile_fix)
 end
@@ -103,8 +100,8 @@ transmissionPattern = getTransmitterPattern(transmitterVector)
 function getReceiverString(receiverVector::Vector{Int16})::String
 	receiver = ""
 	
-	for i in range(1, ratio * precision * 10; step=1)
-		receiver *= string(receiverVector[i])
+	for i in receiverVector
+		receiver *= string(i)
 	end
 	
 	return receiver
@@ -154,7 +151,7 @@ expanded_transmission = expandVector(transmitterVector, ratio)
 begin
 	dup_x = start_point:end_point
 	dup_y = [expanded_transmission[start_point:end_point] received_offset[start_point:end_point]]
-	plot(dup_x, dup_y, markershape=:circle, linestyle=:dash, title = "Comparison", label = ["Transmitted" "Received"])
+	plot(dup_x, dup_y, title = "Comparison", label = ["Transmitted" "Received"])
 end
 
 # ╔═╡ 3ab6d112-a3bf-4629-b34f-f1e10231b713
@@ -184,6 +181,9 @@ function getBER(sent, received, ratio)::Float64
 	
 	return (1 - success/size(sent)[1])
 end
+
+# ╔═╡ 366bf2ec-0033-421e-a3b2-2348e5199048
+overallBER = getBER(transmitterVector, receiverVector[transmissionStart:end], ratio)
 
 # ╔═╡ 45c2f630-83fb-44f8-8330-4334541eb246
 ber = getBER(transmitterVector[1:Int(round(start_point/ratio))], received_fix_offset[1:start_point], ratio)
@@ -1052,6 +1052,7 @@ version = "0.9.1+5"
 # ╠═15747c5d-1b10-4b25-ba6f-2de9336c2087
 # ╟─232bceae-3d3a-4da3-aff6-ac0aac552561
 # ╟─0ee4088d-f04d-4d6f-9883-f0d175712867
+# ╠═366bf2ec-0033-421e-a3b2-2348e5199048
 # ╟─4ae48d1e-d0f1-4d3a-a457-83c108aa4d17
 # ╟─76b61b23-97f8-4ceb-a18e-2c2a7396a7d5
 # ╟─ab21165f-3e1f-4d49-b4b8-aa39786951cc
@@ -1065,10 +1066,9 @@ version = "0.9.1+5"
 # ╟─ac3f0a7a-6c96-4df0-9193-5b61af04e126
 # ╟─fb972508-11e0-4334-9eed-48f74f27636f
 # ╟─3129cb41-f9f0-4c65-8efe-0ba9f0c9c8ae
-# ╠═30cd5272-2645-4b24-a93b-5e176e40827c
+# ╟─30cd5272-2645-4b24-a93b-5e176e40827c
 # ╟─3ab6d112-a3bf-4629-b34f-f1e10231b713
 # ╠═45c2f630-83fb-44f8-8330-4334541eb246
-# ╠═d695c4ea-74de-4acc-bdcf-2ec83fe44059
 # ╟─a0f36b24-65a7-4834-ad44-5b268ecfade8
 # ╟─9b5d9f6b-e0ec-4aa0-b310-af522e14252a
 # ╟─3cb738b5-f4c3-46a8-abeb-321dd3faebf3
