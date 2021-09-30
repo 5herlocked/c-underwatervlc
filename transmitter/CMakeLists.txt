@@ -9,5 +9,5 @@ if(NOT GPIOD_LIBRARY)
 endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_executable(${PROJECT_NAME} include/utils.h src/transmitter.cpp src/transmitter.h)
+add_executable(${PROJECT_NAME} include/utils.h src/main.cpp src/main.h src/Packet.cpp src/Packet.h)
 target_link_libraries(${PROJECT_NAME} ${GPIOD_LIBRARY})

@@ -2,13 +2,14 @@
 // Created by camv7 on 22/07/2021.
 //
 
-#ifndef TRANSMITTER_TRANSMITTER_H
-#define TRANSMITTER_TRANSMITTER_H
+#ifndef TRANSMITTER_MAIN_H
+#define TRANSMITTER_MAIN_H
 
 #pragma once
 
 #include <cstdlib>
 #include <chrono>
+#include <cstring>
 #include <thread>
 #include <optional>
 #include <iostream>
@@ -26,12 +27,6 @@
 #define OUT 79
 
 using namespace std;
-
-// Binary expression of the 7-bit barker code
-// 1s -> 1, -1 -> 0
-constexpr short packetHeader = 0b1110010;
-
-constexpr short packetTail = 0b00000000;
 
 // Define enums for standardisation
 enum AppType {
@@ -57,10 +52,10 @@ enum GPIO {
 struct Configuration {
     optional<AppType> type{};
     optional<GPIO> state{};
-    optional<int> bits{};
-    optional<char *> message{};
-    optional<double> frequency{};
-    optional<int> cycles{};
+    optional<int> bits = 300;
+    optional<string> message{};
+    optional<double> frequency = 25;
+    optional<int> cycles = 1;
     optional<string> output{};
 };
 
@@ -70,4 +65,4 @@ struct LogEntry {
     optional<string> message{};
 };
 
-#endif //TRANSMITTER_TRANSMITTER_H
+#endif //TRANSMITTER_MAIN_H
