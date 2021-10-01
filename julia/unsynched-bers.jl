@@ -1,7 +1,7 @@
 using Plots, CSV, Query, DataFrames
 gr()
 
-data_location = "E:\\csvs\\"
+data_location = "C:\\Users\\camv7\\Downloads\\MORSE\\csvs\\"
 available_files = readdir(data_location)
 
 function getTransmitterPattern(transmitterVector::Vector{Int16}, precision, ratio)::String
@@ -53,6 +53,8 @@ function getBER(sent, received, ratio)::Float64
 			success += 1
 		end
 	end
+
+	return (1 - success/size(sent)[1])
 end
 
 begin
@@ -60,6 +62,9 @@ begin
     transmitter_files = temp_files |> @filter(occursin("transmitter", split(_, '.')[1])) |> collect
 
     matched_files = Set{String}()
+
+	data_set = []
+	ber = []
     
     for file_name in temp_files
         if occursin("transmitter", file_name)
@@ -85,12 +90,29 @@ begin
         end
         push!(matched_files, dataset_specifier[3])
         transmitter = transmitter_files |> @filter(occursin(dataset_specifier[3], _) && occursin(dataset_specifier[1], _)) |> collect
-        
+
+        if size(transmitter)[1] < 1
+			continue
+		end
+
         transmitter = CSV.File(data_location*transmitter[1])
         receiver = CSV.File(data_location*file_name)
 
         transmitter_vec = getVectorFromFile(transmitter)
 
         transmitter_pattern = getTransmitterPattern(transmitter_vec, 3, ratio)
+
+		receiver_vec = getVectorFromFile(receiver)
+
+		ber_val = getBER(transmitter_vec, receiver_vec, ratio)
+
+		append!(ber, ber_val)
+		append!(data_set, dataset_specifier[3]*"-"*dataset_specifier[2])
     end
+
+	dF = DataFrame()
+	dF.data_set = data_set
+	dF.ber = ber
+
+	CSV.write("temp-unsycnched-bers", dF)
 end
