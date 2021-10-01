@@ -16,8 +16,6 @@ begin
 
     threshold = blue_low + (blue_high - blue_low)/2
 
-    println(threshold)
-
     for file_name in sal_files
         if occursin("on", file_name) || occursin("off", file_name) || occursin("transmitter", file_name)
             continue

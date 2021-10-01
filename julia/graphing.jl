@@ -60,14 +60,14 @@ end
 
 # ╔═╡ a40b47e5-aca0-4088-ba49-7899ae0a4ef4
 begin
-	transmitter_url = "E:\\csvs\\transmitter_25Hz_7ph.csv"
+	transmitter_url = "E:\\MORSE datasets\\packet_set\\transmitter_50Hz_100fps_7ph.csv"
 	transmitterFile = CSV.File(transmitter_url)
 	transmitterVector = getVectorFromFile(transmitterFile)
 end
 
 # ╔═╡ 15747c5d-1b10-4b25-ba6f-2de9336c2087
 begin
-	receiver_url = "E:\\csvs\\25hz_100fps_7ph.csv"
+	receiver_url = "E:\\MORSE datasets\\packet_set\\50Hz_100fps_packet_7ph.csv"
 	receiverFile = CSV.File(receiver_url)
 	receiverVector = getVectorFromFile(receiverFile)
 end
@@ -169,7 +169,7 @@ function getBER(sent, received, ratio)::Float64
 		iSucc = 0
 		for i in 1:ratio
 			rec_counter += 1
-			if received[rec_counter] == b
+			if rec_counter <= size(received)[1] && received[rec_counter] == b
 				iSucc += 1
 			end
 		end
@@ -1066,7 +1066,7 @@ version = "0.9.1+5"
 # ╟─ac3f0a7a-6c96-4df0-9193-5b61af04e126
 # ╟─fb972508-11e0-4334-9eed-48f74f27636f
 # ╟─3129cb41-f9f0-4c65-8efe-0ba9f0c9c8ae
-# ╟─30cd5272-2645-4b24-a93b-5e176e40827c
+# ╠═30cd5272-2645-4b24-a93b-5e176e40827c
 # ╟─3ab6d112-a3bf-4629-b34f-f1e10231b713
 # ╠═45c2f630-83fb-44f8-8330-4334541eb246
 # ╟─a0f36b24-65a7-4834-ad44-5b268ecfade8
@@ -1075,6 +1075,6 @@ version = "0.9.1+5"
 # ╟─1188f8b9-e645-4b4b-8b8d-23538120e35d
 # ╟─2bfa4263-3b0b-4849-b453-a39f2545a88c
 # ╟─82857d7d-08c6-4d06-8a1f-4468e479eb43
-# ╟─d4d5ce62-da86-4b90-9aba-9b6e4313f830
+# ╠═d4d5ce62-da86-4b90-9aba-9b6e4313f830
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
