@@ -38,3 +38,18 @@ You have a folder with the following video files and structure:
 And you want to deduce the bit values based on the two ground truth videos (`off` and `on`). You would do this by running:
 `$ ./analysis_tool.exe -s -d .`.
 This will tell the analysis tool to look in the current directory to look for the videos `-d .`, then consider them a dataset `-s`.
+This will export a `.csv` file for every video including the two ground truths and for the exported videos, it also includes
+a bit value based on thresholding.
+
+### Sample CSV output
+
+```
+deltaTime,blue,green,red,bit
+0.01,198.098,171.867,107.503,1
+0.02,185.579,160.239,99.2207,0
+0.03,185.577,160.368,99.2946,0
+0.04,179.331,154.215,95.9737,0
+0.05,179.176,154.14,96.0987,0
+0.06,172.905,148.086,92.0129,0
+0.07,172.597,147.857,91.8155,0
+```
