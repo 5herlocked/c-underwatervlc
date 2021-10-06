@@ -8,8 +8,13 @@ than having to process large video files at every step of the way.
 ## Design choices and commandline options
 
 ### Commandline Options
-
-
+The tool has the following command line options:
+* **-s/--dataset**: This command line option tells the program that any further options need to be contextualised
+as part of a greater dataset. This triggers the app to look for ground truth videos (LED ON and OFF). 
+* **-d/--folder**: This command option sets the location of the folder where the analysis tool looks for the videos.
+* **-f/--file**: The command option sets the location of the file the analysis tool opens and analyses.
+* **-o/--output**:
+* **-h/--help**
 
 ### Specific design choices
 
