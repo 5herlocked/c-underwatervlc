@@ -5,16 +5,36 @@ into pure numbers in a CSV file seperated as follows: (deltaTime, blue, green, r
 future processing steps since we have the relevant data condensed into 5 sets of `Float64` numbers rather
 than having to process large video files at every step of the way.
 
-## Design choices and commandline options
-
 ### Commandline Options
 The tool has the following command line options:
 * **-s/--dataset**: This command line option tells the program that any further options need to be contextualised
 as part of a greater dataset. This triggers the app to look for ground truth videos (LED ON and OFF). 
 * **-d/--folder**: This command option sets the location of the folder where the analysis tool looks for the videos.
 * **-f/--file**: The command option sets the location of the file the analysis tool opens and analyses.
-* **-o/--output**:
-* **-h/--help**
+* **-h/--help** Prints out all the options and command structure for the file.
 
-### Specific design choices
 
+### Possible use case
+You have a video file called: `25Hz_100fps_10ph.avi` and want to generate the scalar mean for the region of interest.
+All you have to do is: `$ ./analysis_tool.exe -f ./25Hz_100fps_10ph.avi`.
+
+This will first open a window that asks for the ROI (LED Location) and then take the scalar mean of the ROI to generate
+`25Hz_100fps_10ph.csv`.
+
+You have a folder with the following video files and structure:
+
+```
+./ 
+    5Hz_15fps_20c.avi
+    15Hz_30fps_20c.avi
+    30Hz_60fps_20c.avi
+    50Hz_100fps_20c.avi
+    25Hz_100fps_20c.avi
+    1Hz_100fps_20c.avi
+    on_100fps_20c.avi
+    off_100fps_20c.avi
+    analysis_tool.exe
+```
+And you want to deduce the bit values based on the two ground truth videos (`off` and `on`). You would do this by running:
+`$ ./analysis_tool.exe -s -d .`.
+This will tell the analysis tool to look in the current directory to look for the videos `-d .`, then consider them a dataset `-s`.

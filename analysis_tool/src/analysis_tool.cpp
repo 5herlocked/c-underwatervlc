@@ -74,13 +74,6 @@ void parseArgs(int argc, char *argv[], Configuration &app_config) {
                 cout << "You have attempted to use 2 source flags. Please make up your mind." << endl;
                 showUsage();
             }
-        } else if ((arg == "-o") || (arg == "--output")) {
-            if (!app_config.genericOutput.has_value()) {
-                // If the output value has not already been declared
-                app_config.genericOutput = argv[++i];
-            } else {
-                cout << "You have attempted to set 2 values of output. Please make up your mind" << endl;
-            }
         } else if ((arg == "-s") || (arg == "--dataset")) {
             // Sets a flag telling us to look for the on_100fps and off_100fps files
             // to set a baseline for the dataset
@@ -335,6 +328,5 @@ void showUsage() {
             "dataset that can be analysed contextually" << endl;
     cout << "-f or --file\t: File path of the avi file you want to analyse" << endl;
     cout << "-d or --folder\t: Path to a folder with svos to be analysed" << endl;
-    cout << "-o or --output\t: Generic output name for the generated analysis files" << endl;
     exit(-1);
 }
