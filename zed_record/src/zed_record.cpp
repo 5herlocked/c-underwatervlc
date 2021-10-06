@@ -112,11 +112,11 @@ void parseArgs(int argc, char *argv[], Configuration &appConfig) {
             showUsage();
             return;
         } else if ((arg == "-r") || (arg == "--resolution")) {
-            resStr = argv[i + 1];
+            resStr = argv[++i];
         } else if ((arg == "-f") || (arg == "--framerate")) {
-            frameRateStr = argv[i + 1];
+            frameRateStr = argv[++i];
         } else if ((arg == "-o") || (arg == "--output")) {
-            appConfig.fileName = argv[i + 1];
+            appConfig.fileName = argv[++i];
         } else {
             cout << "Unknown option: <" << argv[i] << endl;
         }

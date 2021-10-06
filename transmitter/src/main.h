@@ -2,13 +2,14 @@
 // Created by camv7 on 22/07/2021.
 //
 
-#ifndef TRANSMITTER_TRANSMITTER_H
-#define TRANSMITTER_TRANSMITTER_H
+#ifndef TRANSMITTER_MAIN_H
+#define TRANSMITTER_MAIN_H
 
 #pragma once
 
 #include <cstdlib>
 #include <chrono>
+#include <cstring>
 #include <thread>
 #include <optional>
 #include <iostream>
@@ -28,9 +29,10 @@
 using namespace std;
 
 // Define enums for standardisation
-enum APP_TYPE {
+enum AppType {
     STATE,
     RANDOM,
+    MESSAGE,
     TEST,
     // TODO: Just add elements in here as the app gets more complicated
 };
@@ -48,11 +50,12 @@ enum GPIO {
 // Realistically there will only be one that'll be created
 // but easier to just declare as a full struct
 struct Configuration {
-    optional<APP_TYPE> type{};
+    optional<AppType> type{};
     optional<GPIO> state{};
-    optional<int> bits{};
-    optional<double> frequency{};
-    optional<int> cycles{};
+    optional<int> bits = 300;
+    optional<string> message{};
+    optional<double> frequency = 25;
+    optional<int> cycles = 1;
     optional<string> output{};
 };
 
@@ -62,35 +65,4 @@ struct LogEntry {
     optional<string> message{};
 };
 
-// function definitions
-void parseArgs(int argc, char **argv, Configuration &config);
-
-// These accept a reference to a pointer
-void instantiateGPIO(gpiod_chip *&chip, gpiod_line *&pin);
-
-void gpioCleanUp(gpiod_chip *&pChip, gpiod_line *&pLine);
-
-void setState(const Configuration &config);
-
-optional<vector<LogEntry>> transmit(const Configuration &config, const vector<int> &transmission);
-
-void preciseSleep(double seconds);
-
-void generateCSV(const vector<LogEntry>& logs, const Configuration &appConfig);
-
-void showUsage();
-
-void signalHandler(int signal);
-
-optional<double> getFrequency(long frequency);
-
-vector<int> generateRandomTransmission(const int &value);
-
-optional<GPIO> toGPIO(const string &input);
-
-// Test functions
-[[maybe_unused]] Configuration getTestConfiguration();
-
-[[maybe_unused]] vector<int> generateBitFlips(int size);
-
-#endif //TRANSMITTER_TRANSMITTER_H
+#endif //TRANSMITTER_MAIN_H
