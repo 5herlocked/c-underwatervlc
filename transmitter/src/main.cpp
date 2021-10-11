@@ -295,7 +295,7 @@ transmitMessage(const Configuration &config, const string &message) {
 
     auto currentPayload = new unsigned char[PAYLOAD_SIZE];
     // 8 byte payload
-    for (int i = 0; i < message.size(); ++i) {
+    for (int i = 0; i <= message.size(); ++i) {
         // the payload is currently full
         if (i != 0 && i % PAYLOAD_SIZE == 0) {
             string tempString;
